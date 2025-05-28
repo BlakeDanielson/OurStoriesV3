@@ -44,14 +44,14 @@ Book production and shipping time (target <10 business days).
 AI generation success rates (minimal errors or nonsensical outputs requiring regeneration).
 
 2. Target Audience
-Primary: Parents, guardians, and relatives of young children (ages approx. 2-8 years old) looking for unique, meaningful gifts or tools to encourage reading, self-esteem, and emotional development.
-Characteristics:
-May have limited technical skills ("non-technical people"), valuing simplicity and guidance.
-Value deep personalization and strong emotional connection.
-Seek high-quality, age-appropriate, and safe content.
-Likely active on social media and responsive to visually appealing and emotionally resonant products.
-Includes gift-givers seeking "wow-factor" presents that are both thoughtful and unique.
-(Refer to detailed User Personas document for richer profiles: Sarah, David, Chloe, Mark, Dr. Anya Sharma, Alex Chen).
+   Primary: Parents, guardians, and relatives of young children (ages approx. 2-8 years old) looking for unique, meaningful gifts or tools to encourage reading, self-esteem, and emotional development.
+   Characteristics:
+   May have limited technical skills ("non-technical people"), valuing simplicity and guidance.
+   Value deep personalization and strong emotional connection.
+   Seek high-quality, age-appropriate, and safe content.
+   Likely active on social media and responsive to visually appealing and emotionally resonant products.
+   Includes gift-givers seeking "wow-factor" presents that are both thoughtful and unique.
+   (Refer to detailed User Personas document for richer profiles: Sarah, David, Chloe, Mark, Dr. Anya Sharma, Alex Chen).
 
 3. User Experience & Design Principles
 
@@ -134,15 +134,15 @@ FR-7.2: Users shall have an option to provide brief text comments on content the
 FR-7.3: This feedback data shall be logged for future AI model training (RLHF), prompt refinement, and product improvement.
 
 5. User Stories
-(This PRD includes initial examples. Refer to the comprehensive User Stories document, including those tailored to personas, for a full understanding of user needs.)
-US-1 (Parent creating a book): "As a parent, I want to easily upload a few photos of my child and have the AI create a character that looks like them, so the story feels truly personal."
-US-2 (Parent customizing the story): "As a parent, I want to choose my child's favorite hobby (e.g., dinosaurs) and have it meaningfully incorporated into the story and illustrations, so the book reflects their unique interests and personality."
-US-3 (Parent editing an image): "As a parent, if my child is shown frowning in an illustration but the scene is happy, I want to be able to quickly request the AI to make them smile, so the image matches the story's emotion."
-US-4 (Parent with limited time): "As a busy parent, I want to be able to generate a complete, good-quality draft of a personalized book in under 5 minutes, so I can create a special gift without a huge time commitment."
-US-5 (Parent ensuring quality): "As a parent, I want to preview the entire book and edit any text or regenerate images before I order, so I am confident in the final product representing my child well."
-US-S2 (Sarah - Balancing Education & Fun): "As Sarah, I want to be able to choose a story theme that subtly incorporates a learning element (like problem-solving or kindness) while still being a fun adventure for Leo, so the book is both entertaining and enriching."
-US-D1 (David - Simple Start & Clear Guidance): "As David, a grandfather who isn't highly tech-savvy, I want the website to have very large, clear buttons and simple, step-by-step instructions, perhaps with a 'help' tooltip for each section, so I can confidently create a beautiful book for Emily."
-US-C2 (Chloe - "Wow-Factor" Personalization): "As Chloe, I want the AI to not just include Lily's name and hobbies, but also subtly weave in her personality traits (like 'brave' or 'curious') into the narrative and the character's expressions in the illustrations, so the gift feels incredibly insightful and wows her parents."
+   (This PRD includes initial examples. Refer to the comprehensive User Stories document, including those tailored to personas, for a full understanding of user needs.)
+   US-1 (Parent creating a book): "As a parent, I want to easily upload a few photos of my child and have the AI create a character that looks like them, so the story feels truly personal."
+   US-2 (Parent customizing the story): "As a parent, I want to choose my child's favorite hobby (e.g., dinosaurs) and have it meaningfully incorporated into the story and illustrations, so the book reflects their unique interests and personality."
+   US-3 (Parent editing an image): "As a parent, if my child is shown frowning in an illustration but the scene is happy, I want to be able to quickly request the AI to make them smile, so the image matches the story's emotion."
+   US-4 (Parent with limited time): "As a busy parent, I want to be able to generate a complete, good-quality draft of a personalized book in under 5 minutes, so I can create a special gift without a huge time commitment."
+   US-5 (Parent ensuring quality): "As a parent, I want to preview the entire book and edit any text or regenerate images before I order, so I am confident in the final product representing my child well."
+   US-S2 (Sarah - Balancing Education & Fun): "As Sarah, I want to be able to choose a story theme that subtly incorporates a learning element (like problem-solving or kindness) while still being a fun adventure for Leo, so the book is both entertaining and enriching."
+   US-D1 (David - Simple Start & Clear Guidance): "As David, a grandfather who isn't highly tech-savvy, I want the website to have very large, clear buttons and simple, step-by-step instructions, perhaps with a 'help' tooltip for each section, so I can confidently create a beautiful book for Emily."
+   US-C2 (Chloe - "Wow-Factor" Personalization): "As Chloe, I want the AI to not just include Lily's name and hobbies, but also subtly weave in her personality traits (like 'brave' or 'curious') into the narrative and the character's expressions in the illustrations, so the gift feels incredibly insightful and wows her parents."
 6. Non-Functional Requirements
 
 6.1. Performance
@@ -167,8 +167,7 @@ NFR-5.2: AI prompts, model configurations, and curated content lists (traits, ho
 NFR-6.1: All user data, especially uploaded photos of children and personal information, must be stored securely (encryption at rest and in transit) and handled according to strict privacy policies (e.g., GDPR, CCPA compliance). The system shall be designed and operated to achieve COPPA (Children's Online Privacy Protection Act) compliance in the US, and/or other relevant regional child data privacy standards in target markets.
 NFR-6.2: Photos should only be used for the purpose of generating the book and training the child-specific model adapter (if applicable, with explicit consent); clear consent must be obtained for any data use. Users must have an option to request deletion of their data/photos.
 NFR-6.3: Payment processing must be PCI-DSS compliant.
-NFR-6.4: Regular security audits and penetration testing should be planned.
-7. Technical Considerations
+NFR-6.4: Regular security audits and penetration testing should be planned. 7. Technical Considerations
 
 7.1. AI Models
 Image Generation: Likely a diffusion-based model (e.g., Stable Diffusion variant) capable of fine-tuning/LoRA adaptation for individual child likeness. Model must support various artistic styles and allow for some level of attribute control via prompting. EXPERIMENT TESTING WITH MAJOR MODELS LIKE GEMINI AND OPENAI AND BYTEDANCE FOR IMAGE CREATION
@@ -178,8 +177,7 @@ Model Hosting: Cloud-based AI platform services (e.g., Google Vertex AI, AWS Sag
 Frontend: Modern web framework and TypeSctipt (e.g., React) optimized for responsiveness and interactivity.
 Backend: MOST LIKELY Next/Node/Express and TypeScript.
 Database: Relational (e.g., PostgreSQL) suitable for user data, project data, and links to AI assets, chosen for scalability and query needs.
-Storage: Secure cloud storage (e.g., Upload Thing, AWS S3, Google Cloud Storage) for uploaded images and generated assets.
-8. Future Enhancements (Post-MVP)
+Storage: Secure cloud storage (e.g., Upload Thing, AWS S3, Google Cloud Storage) for uploaded images and generated assets. 8. Future Enhancements (Post-MVP)
 
 Saving child profiles (with parental consent) for easy reuse and creating series.
 Pre-built, highly customizable story templates as starting points.
@@ -196,15 +194,13 @@ Teacher/Educator Accounts & Features: Explore specific offerings for educators, 
 Dedicated Companion App: A simple mobile app for users to access and manage their purchased digital content (eBooks, future audiobooks).
 Deeper Narrative Personalization: Allow users to (optionally) input simple, key plot points, a specific moral they want to convey, or a cherished family anecdote for the AI to weave in.
 Secure options for sharing digital previews or final eBooks with family members.
-Community features (with strict privacy controls) for sharing anonymized story ideas or positive experiences.
-9. Assumptions
+Community features (with strict privacy controls) for sharing anonymized story ideas or positive experiences. 9. Assumptions
 
 A-1: Current AI technology is capable of achieving satisfactory child likeness, high-quality illustrations in various styles, and coherent, engaging, deeply personalized story narratives with appropriate prompting, fine-tuning, and safety protocols.
 A-2: Users are willing to upload photos of their children and provide personal details for personalization under clear, transparent privacy terms and with robust security measures in place.
 A-3: Reliable print-on-demand services can meet consistent quality standards and shipping time requirements (<10 business days).
 A-4: The cost of AI generation (GPU time, API calls) and cloud services will allow for a viable business model at the proposed price points.
-A-5: A user-friendly interface and effective editing tools can mitigate instances of suboptimal AI generation, leading to high user satisfaction.
-10. Risks & Mitigation
+A-5: A user-friendly interface and effective editing tools can mitigate instances of suboptimal AI generation, leading to high user satisfaction. 10. Risks & Mitigation
 
 R-1: AI Output Quality/Consistency: Generated content (especially images and nuanced story elements) might not always meet user expectations or could contain artifacts, biases, or nonsensical outputs.
 M-1: Rigorous prompt engineering, robust AI model selection and fine-tuning. Curated "good/bad example" datasets for prompt refinement and RLHF. Comprehensive and intuitive editing tools for text and images. User feedback loop for continuous improvement. Implement stringent content safety filters and moderation processes.
@@ -217,8 +213,7 @@ M-4: Continuously optimize AI usage (e.g., prompt efficiency, model choice). Exp
 R-5: User Adoption / Technical Barrier: Despite efforts for simplicity, some non-technical users may still find the process complex or overwhelming.
 M-5: Extensive usability testing with target personas. Clear, concise tutorials, FAQs, and tooltips. Responsive and empathetic customer support. Iterative design improvements based on user feedback.
 R-6: Content Appropriateness & Bias: AI models can inadvertently generate content that is subtly biased, inappropriate, or reinforces stereotypes, even if not overtly harmful.
-M-6: Implement sophisticated AI safety filters. Develop detailed content guidelines for AI. Regularly audit AI outputs for bias. Incorporate user feedback on content concerns. Use diverse datasets for training/fine-tuning where possible. Consider human review for sensitive themes or flagged content.
-11. Open Questions
+M-6: Implement sophisticated AI safety filters. Develop detailed content guidelines for AI. Regularly audit AI outputs for bias. Incorporate user feedback on content concerns. Use diverse datasets for training/fine-tuning where possible. Consider human review for sensitive themes or flagged content. 11. Open Questions
 
 OQ-1: What is the specific fine-tuning/personalization strategy for image generation (e.g., Dreambooth, LoRA, other few-shot methods) that best balances quality, speed, consistency, and cost for individual children across various styles?
 OQ-2: What level of specific image editing control beyond simple regeneration requests (FR-5.3) is feasible and desirable for MVP?

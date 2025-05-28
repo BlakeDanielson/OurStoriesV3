@@ -5,12 +5,20 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ourStories - AI-Powered Personalized Children\'s Books',
-  description: 'Create magical, one-of-a-kind storybooks where your child is the main character, featuring their unique appearance, personality traits, and hobbies woven into original narratives and illustrations.',
-  keywords: ['AI', 'children', 'books', 'personalization', 'stories', 'illustrations'],
+  title: "ourStories - AI-Powered Personalized Children's Books",
+  description:
+    'Create magical, one-of-a-kind storybooks where your child is the main character, featuring their unique appearance, personality traits, and hobbies woven into original narratives and illustrations.',
+  keywords: [
+    'AI',
+    'children',
+    'books',
+    'personalization',
+    'stories',
+    'illustrations',
+  ],
   authors: [{ name: 'ourStories Team' }],
   openGraph: {
-    title: 'ourStories - AI-Powered Personalized Children\'s Books',
+    title: "ourStories - AI-Powered Personalized Children's Books",
     description: 'Create magical, personalized storybooks for your child',
     type: 'website',
   },
@@ -30,4 +38,4 @@ export default function RootLayout({
       </body>
     </html>
   )
-} 
+}

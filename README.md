@@ -9,10 +9,11 @@ To empower anyone to easily create magical, one-of-a-kind storybooks where a chi
 ## 🚀 Features
 
 ### Core Features (MVP)
+
 - **Child Personalization**: Input child's name, personality traits, hobbies, and interests
 - **Photo Upload**: Upload 1-5 photos for AI character likeness generation
 - **Story Customization**: Choose illustration style, story length, theme, and story arc
-- **AI-Powered Generation**: 
+- **AI-Powered Generation**:
   - Text generation using OpenAI GPT-4 or Google Gemini
   - Image generation using Stable Diffusion with LoRA training for character consistency
 - **Interactive Preview**: Flipbook-style book preview with editing capabilities
@@ -21,6 +22,7 @@ To empower anyone to easily create magical, one-of-a-kind storybooks where a chi
 - **Print-on-Demand**: Physical book production and shipping
 
 ### Advanced Features
+
 - **Real-time Editing**: Inline text editing and image modification requests
 - **Content Moderation**: AI-powered safety and bias detection
 - **Analytics**: User behavior tracking and conversion metrics
@@ -29,6 +31,7 @@ To empower anyone to easily create magical, one-of-a-kind storybooks where a chi
 ## 🛠 Tech Stack
 
 ### Frontend
+
 - **Framework**: Next.js 14+ with App Router
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS + shadcn/ui components
@@ -36,6 +39,7 @@ To empower anyone to easily create magical, one-of-a-kind storybooks where a chi
 - **Forms**: React Hook Form + Zod validation
 
 ### Backend
+
 - **Runtime**: Node.js
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: NextAuth.js v5
@@ -43,12 +47,14 @@ To empower anyone to easily create magical, one-of-a-kind storybooks where a chi
 - **Job Queue**: BullMQ with Redis
 
 ### AI Services
+
 - **Text Generation**: OpenAI GPT-4 / Google Gemini
 - **Image Generation**: Stable Diffusion (Replicate/RunPod/Modal)
 - **Content Safety**: OpenAI Moderation API, Google Cloud Vision
 - **Image Processing**: Real-ESRGAN for upscaling
 
 ### Infrastructure
+
 - **Hosting**: Vercel
 - **Database**: Neon/Supabase PostgreSQL
 - **Storage**: AWS S3 / Vercel Blob
@@ -80,7 +86,8 @@ ourStories/
 ## 🚦 Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
+
+- Node.js 18+
 - npm/yarn/pnpm
 - PostgreSQL database
 - Git
@@ -88,29 +95,34 @@ ourStories/
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/ourStories.git
    cd ourStories
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
+
    ```bash
    cp .env.example .env.local
    # Edit .env.local with your API keys and database URL
    ```
 
 4. **Set up the database**
+
    ```bash
    npx prisma generate
    npx prisma db push
    ```
 
 5. **Run the development server**
+
    ```bash
    npm run dev
    ```
@@ -121,6 +133,7 @@ ourStories/
 ## 🔧 Development
 
 ### Available Scripts
+
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
@@ -130,6 +143,7 @@ ourStories/
 - `npm run test:e2e` - Run E2E tests
 
 ### Code Quality
+
 - **ESLint**: Configured with Next.js and TypeScript rules
 - **Prettier**: Code formatting
 - **Husky**: Git hooks for pre-commit checks
@@ -178,16 +192,19 @@ RESEND_API_KEY="re_..."
 ## 🧪 Testing
 
 ### Unit Tests
+
 ```bash
 npm test
 ```
 
 ### E2E Tests
+
 ```bash
 npm run test:e2e
 ```
 
 ### Test Coverage
+
 ```bash
 npm run test:coverage
 ```
@@ -195,11 +212,13 @@ npm run test:coverage
 ## 🚀 Deployment
 
 ### Vercel (Recommended)
+
 1. Connect your GitHub repository to Vercel
 2. Configure environment variables in Vercel dashboard
 3. Deploy automatically on push to main branch
 
 ### Manual Deployment
+
 ```bash
 npm run build
 npm start
@@ -239,4 +258,4 @@ For support, email support@ourstories.com or join our Discord community.
 
 ---
 
-**Made with ❤️ for creating magical reading experiences for children** 
+**Made with ❤️ for creating magical reading experiences for children**
