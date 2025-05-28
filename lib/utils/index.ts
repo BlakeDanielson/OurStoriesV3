@@ -1,4 +1,6 @@
-// Utility functions will be exported here
-// Example: export { cn } from './cn'
-// Example: export { formatDate } from './format'
-// Example: export { validateEmail } from './validation'
+// Utility functions
+export { cn } from './cn'
+
+// Future utility exports:
+// export { formatDate } from './format'
+// export { validateEmail } from './validation'

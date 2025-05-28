@@ -2,3 +2,6 @@
 // Example: export { API_ENDPOINTS } from './api'
 // Example: export { STORY_THEMES } from './stories'
 // Example: export { UI_CONSTANTS } from './ui'
+
+// Empty export to make this a valid module
+export {}
