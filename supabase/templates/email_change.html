@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm your new email address</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 16px;
+            color: #64748b;
+            margin-bottom: 30px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #059669;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 20px 0;
+        }
+        .button:hover {
+            background-color: #047857;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 14px;
+            color: #64748b;
+            text-align: center;
+        }
+        .link {
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .warning {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #92400e;
+        }
+        .info {
+            background-color: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #0c4a6e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">ourStories</div>
+            <h1 class="title">Confirm your new email</h1>
+            <p class="subtitle">Please verify your new email address</p>
+        </div>
+
+        <p>Hi there!</p>
+        
+        <p>We received a request to change the email address for your ourStories account to <strong>{{ .Email }}</strong>.</p>
+        
+        <p>To complete this email change, please click the button below to confirm your new email address:</p>
+        
+        <div style="text-align: center;">
+            <a href="{{ .ConfirmationURL }}" class="button">Confirm New Email</a>
+        </div>
+        
+        <div class="warning">
+            <strong>Important:</strong> This confirmation link will expire in 24 hours. If you don't confirm your new email within this time, your email address will remain unchanged.
+        </div>
+        
+        <p>If the button above doesn't work, you can copy and paste this link into your browser:</p>
+        <p><a href="{{ .ConfirmationURL }}" class="link">{{ .ConfirmationURL }}</a></p>
+        
+        <div class="info">
+            <strong>What happens next:</strong>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>After confirming, this email address will become your new login email</li>
+                <li>You'll receive all future notifications at this address</li>
+                <li>Your old email address will no longer be associated with your account</li>
+                <li>You may need to sign in again after the change</li>
+            </ul>
+        </div>
+        
+        <p><strong>If you didn't request this email change:</strong></p>
+        <ul>
+            <li>You can safely ignore this email - your email address won't be changed</li>
+            <li>Someone may have entered your email address by mistake</li>
+            <li>If you're concerned about account security, please contact our support team immediately</li>
+        </ul>
+        
+        <div class="footer">
+            <p>Best regards,<br>The ourStories Team</p>
+            <p>
+                <a href="{{ .SiteURL }}" class="link">Visit ourStories</a> | 
+                <a href="{{ .SiteURL }}/support" class="link">Get Support</a>
+            </p>
+            <p style="margin-top: 20px; font-size: 12px;">
+                This email was sent to {{ .Email }}. If you have any questions about this email change, please contact our support team.
+            </p>
+        </div>
+    </div>
+</body>
+</html> 
