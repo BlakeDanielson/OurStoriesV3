@@ -1,0 +1,137 @@
+CHILDREN'S STORYBOOK IMAGE GENERATION TEST PROMPTS
+=================================================
+
+These prompts are designed to test AI image generation models for a personalized children's storybook app. Each prompt tests different aspects crucial for children's book illustrations: character consistency, age-appropriate content, emotional expression, diverse scenarios, and various illustration styles.
+
+PROMPT 1: CHILD PROTAGONIST - ADVENTURE SCENE
+==============================================
+"A brave 6-year-old child with curly brown hair and bright green eyes, wearing a red adventure backpack, standing at the edge of a magical forest filled with glowing mushrooms and friendly woodland creatures, watercolor illustration style, warm lighting, child-friendly, wholesome, safe for children"
+
+Test Focus: Child character design, adventure themes, magical elements
+Style: Watercolor
+Age Group: 6 years old
+
+PROMPT 2: CHILD PROTAGONIST - LEARNING MOMENT
+==============================================
+"A curious 4-year-old child with straight black hair in pigtails, wearing a yellow dress with star patterns, sitting cross-legged in a cozy library surrounded by floating books and gentle fairy lights, discovering letters that sparkle and dance around them, cartoon illustration style, soft pastel colors, educational, encouraging"
+
+Test Focus: Educational content, indoor scenes, learning themes
+Style: Cartoon
+Age Group: 4 years old
+
+PROMPT 3: CHILD PROTAGONIST - FRIENDSHIP SCENE
+===============================================
+"A kind 7-year-old child with wavy blonde hair and freckles, wearing overalls and a striped shirt, helping a small injured bunny in a sunny meadow filled with colorful wildflowers, other forest animals watching gratefully nearby, realistic illustration style, natural lighting, compassionate, heartwarming"
+
+Test Focus: Emotional expression, animal interactions, kindness themes
+Style: Realistic
+Age Group: 7 years old
+
+PROMPT 4: CHILD PROTAGONIST - CREATIVE ACTIVITY
+================================================
+"An artistic 5-year-old child with short red hair and glasses, wearing a paint-splattered apron, standing in front of a large easel painting a rainbow that comes to life and flows off the canvas into the room, anime illustration style, vibrant colors, creative, imaginative, inspiring"
+
+Test Focus: Creative activities, fantasy elements, artistic themes
+Style: Anime
+Age Group: 5 years old
+
+PROMPT 5: CHILD PROTAGONIST - BEDTIME COMFORT
+==============================================
+"A sleepy 3-year-old child with dark curly hair, wearing soft blue pajamas with moon and star patterns, cuddling with a gentle teddy bear in a cozy bedroom with twinkling night lights and a crescent moon visible through the window, watercolor illustration style, soothing blues and purples, peaceful, comforting"
+
+Test Focus: Bedtime scenes, comfort objects, calming atmosphere
+Style: Watercolor
+Age Group: 3 years old
+
+PROMPT 6: CHILD PROTAGONIST - OUTDOOR EXPLORATION
+==================================================
+"An adventurous 8-year-old child with long brown braids, wearing hiking boots and a explorer's vest, discovering a hidden garden behind a stone wall where flowers sing and butterflies leave trails of glitter, cartoon illustration style, bright cheerful colors, sense of wonder, discovery"
+
+Test Focus: Outdoor adventures, nature themes, sense of discovery
+Style: Cartoon
+Age Group: 8 years old
+
+PROMPT 7: CHILD PROTAGONIST - PROBLEM SOLVING
+==============================================
+"A thoughtful 6-year-old child with short black hair and a determined expression, wearing a blue sweater, building a bridge out of colorful blocks to help toy animals cross a pretend river in their playroom, realistic illustration style, warm indoor lighting, problem-solving, determination, creativity"
+
+Test Focus: Problem-solving scenarios, indoor play, determination
+Style: Realistic
+Age Group: 6 years old
+
+PROMPT 8: CHILD PROTAGONIST - FAMILY BONDING
+=============================================
+"A happy 5-year-old child with medium-length brown hair, wearing a cooking apron that's too big, standing on a step stool helping grandma bake cookies in a warm kitchen filled with the golden glow of afternoon sunlight, anime illustration style, warm golden tones, family love, tradition, joy"
+
+Test Focus: Family relationships, domestic scenes, intergenerational bonding
+Style: Anime
+Age Group: 5 years old
+
+PROMPT 9: CHILD PROTAGONIST - OVERCOMING FEARS
+===============================================
+"A initially scared but growing brave 4-year-old child with curly red hair, wearing a superhero cape made from a blanket, facing a friendly dragon who turns out to just want to play, in a magical castle courtyard with soft clouds and rainbow bridges, watercolor illustration style, transformation from fear to friendship, courage"
+
+Test Focus: Emotional growth, overcoming fears, fantasy creatures
+Style: Watercolor
+Age Group: 4 years old
+
+PROMPT 10: CHILD PROTAGONIST - CELEBRATION SCENE
+=================================================
+"A joyful 7-year-old child with wavy dark hair and a big smile, wearing a party hat and colorful clothes, surrounded by floating balloons and confetti in a backyard party setting with other children playing games and laughing in the background, cartoon illustration style, celebration, happiness, community, festive colors"
+
+Test Focus: Social situations, celebrations, group dynamics
+Style: Cartoon
+Age Group: 7 years old
+
+EVALUATION CRITERIA FOR EACH MODEL:
+===================================
+
+1. CHARACTER CONSISTENCY
+   - Does the child look age-appropriate?
+   - Are facial features clear and appealing?
+   - Is the character design suitable for children's books?
+
+2. EMOTIONAL EXPRESSION
+   - Are emotions clearly conveyed?
+   - Do expressions match the story context?
+   - Are emotions positive and appropriate?
+
+3. STYLE APPROPRIATENESS
+   - Does the illustration style match the request?
+   - Is the style suitable for children's books?
+   - Are colors and composition child-friendly?
+
+4. SAFETY & APPROPRIATENESS
+   - Is all content completely safe for children?
+   - Are there any inappropriate elements?
+   - Does it promote positive values?
+
+5. TECHNICAL QUALITY
+   - Is the image clear and well-composed?
+   - Are there any artifacts or distortions?
+   - Is the lighting and color balance good?
+
+6. STORYTELLING POTENTIAL
+   - Does the image tell a clear story?
+   - Would it engage a child's imagination?
+   - Does it fit well in a storybook context?
+
+RECOMMENDED TESTING APPROACH:
+=============================
+
+1. Generate all 10 prompts with each model
+2. Compare results side-by-side for each prompt
+3. Rate each image on the 6 criteria above (1-5 scale)
+4. Note which models excel at specific styles or scenarios
+5. Consider generation speed and cost for each model
+6. Test consistency by generating the same prompt multiple times
+
+SPECIAL CONSIDERATIONS FOR CHILDREN'S BOOKS:
+============================================
+
+- Characters should be diverse and inclusive
+- All content must be completely safe and appropriate
+- Images should inspire positive emotions
+- Illustrations should support learning and development
+- Visual style should appeal to both children and parents
+- Characters should be relatable and aspirational for children 

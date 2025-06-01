@@ -5,3 +5,5 @@
 
 // Empty export to make this a valid module
 export {}
+
+export { FlipBook } from './FlipBook'

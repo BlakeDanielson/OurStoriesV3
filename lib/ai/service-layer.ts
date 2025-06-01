@@ -140,7 +140,7 @@ export interface IAITextGenerationProvider {
 }
 
 // Service registry for dependency injection
-export class ServiceRegistry {
+class ServiceRegistry {
   private services = new Map<string, any>()
   private singletons = new Map<string, any>()
 
@@ -181,8 +181,8 @@ export class ServiceRegistry {
   }
 }
 
-// Configuration manager
-export class ConfigurationManager {
+// Configuration management
+class ConfigurationManager {
   private config: ServiceConfig
   private watchers: Array<(config: ServiceConfig) => void> = []
 
@@ -271,8 +271,8 @@ export class ConfigurationManager {
   }
 }
 
-// Health monitor
-export class HealthMonitor extends EventEmitter {
+// Health monitoring service
+class HealthMonitor extends EventEmitter {
   private health: ServiceHealth
   private checkInterval?: NodeJS.Timeout
   private providers: Map<string, IAITextGenerationProvider> = new Map()
@@ -323,7 +323,7 @@ export class HealthMonitor extends EventEmitter {
     const startTime = Date.now()
     const providerHealths: Record<string, ProviderHealth> = {}
 
-    for (const [name, provider] of this.providers) {
+    for (const [name, provider] of Array.from(this.providers.entries())) {
       try {
         providerHealths[name] = await provider.getHealth()
       } catch (error) {
@@ -420,10 +420,8 @@ export class HealthMonitor extends EventEmitter {
   }
 }
 
-// Enhanced AI service provider with health monitoring
-export class EnhancedAITextGenerationProvider
-  implements IAITextGenerationProvider
-{
+// Enhanced AI text generation provider with metrics and health monitoring
+class EnhancedAITextGenerationProvider implements IAITextGenerationProvider {
   private service: AITextGenerationService
   private metrics: ServiceMetrics
   private health: ProviderHealth

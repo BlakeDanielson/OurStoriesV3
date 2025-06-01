@@ -12,21 +12,42 @@ A comprehensive, production-ready image generation service built using Test-Driv
 - **Performance Monitoring**: Comprehensive metrics and health tracking
 - **Type Safety**: Full TypeScript support with comprehensive type definitions
 
-## Supported Models
+## Available Models
 
-### FLUX.1 (Primary for Photorealistic)
+### FLUX.1 Schnell (Primary for Photorealistic)
 
 - **Provider**: Replicate
-- **Model ID**: `black-forest-labs/flux-1-schnell`
+- **Model ID**: `black-forest-labs/flux-schnell`
 - **Cost**: ~$0.035 per 1024x1024 image
 - **Best for**: Photorealistic portraits, high-quality character images
 
-### Stable Diffusion XL (Cost-Effective)
+### FLUX Kontext Pro (Image Editing)
 
-- **Provider**: Replicate/RunPod
-- **Model ID**: `stability-ai/sdxl`
-- **Cost**: ~$0.030 per 1024x1024 image
-- **Best for**: Illustrations, concept art, general purpose
+- **Provider**: Replicate
+- **Model ID**: `black-forest-labs/flux-kontext-pro`
+- **Cost**: ~$0.06 per image
+- **Best for**: Text-based image editing, style transfer, object modification
+
+### Google Imagen 4 (Premium Quality)
+
+- **Provider**: Replicate
+- **Model ID**: `google/imagen-4`
+- **Cost**: ~$0.08 per image
+- **Best for**: High-quality generation, fine detail rendering, typography
+
+### MiniMax Image-01 (Character Reference)
+
+- **Provider**: Replicate
+- **Model ID**: `minimax/image-01`
+- **Cost**: ~$0.05 per image
+- **Best for**: Character consistency, reference-based generation
+
+### FLUX 1.1 Pro Ultra (Ultra High-Resolution)
+
+- **Provider**: Replicate
+- **Model ID**: `black-forest-labs/flux-1.1-pro-ultra`
+- **Cost**: ~$0.06 per image
+- **Best for**: Ultra high-resolution images (up to 4MP), professional quality
 
 ## Quick Start
 
@@ -40,8 +61,11 @@ const config: ProviderConfig = {
     apiKey: process.env.REPLICATE_API_KEY!,
     baseUrl: 'https://api.replicate.com/v1',
     models: {
-      flux1: 'black-forest-labs/flux-1-schnell',
-      sdxl: 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b',
+      flux1: 'black-forest-labs/flux-schnell',
+      'flux-kontext-pro': 'black-forest-labs/flux-kontext-pro',
+      'imagen-4': 'google/imagen-4',
+      'minimax-image-01': 'minimax/image-01',
+      'flux-1.1-pro-ultra': 'black-forest-labs/flux-1.1-pro-ultra',
     },
     rateLimit: { requestsPerMinute: 60, concurrent: 5 },
   },
@@ -50,7 +74,10 @@ const config: ProviderConfig = {
     baseUrl: 'https://api.runpod.ai/v2',
     models: {
       flux1: 'flux-1-schnell',
-      sdxl: 'stable-diffusion-xl',
+      'flux-kontext-pro': 'flux-kontext-pro',
+      'imagen-4': 'imagen-4',
+      'minimax-image-01': 'minimax-image-01',
+      'flux-1.1-pro-ultra': 'flux-1.1-pro-ultra',
     },
     rateLimit: { requestsPerMinute: 100, concurrent: 10 },
   },
@@ -146,7 +173,12 @@ getMetrics(): GenerationMetrics
 ```typescript
 interface ImageGenerationRequest {
   prompt: string
-  model: 'flux1' | 'sdxl'
+  model:
+    | 'flux1'
+    | 'flux-kontext-pro'
+    | 'imagen-4'
+    | 'minimax-image-01'
+    | 'flux-1.1-pro-ultra'
   width: number
   height: number
   style?:
@@ -180,7 +212,12 @@ interface ImageGenerationResponse {
   status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'cancelled'
   imageUrl?: string
   provider: 'replicate' | 'runpod' | 'modal'
-  model: 'flux1' | 'sdxl'
+  model:
+    | 'flux1'
+    | 'flux-kontext-pro'
+    | 'imagen-4'
+    | 'minimax-image-01'
+    | 'flux-1.1-pro-ultra'
   generationTime?: number
   error?: string
   metadata: ImageGenerationMetadata
@@ -211,8 +248,11 @@ const config: ProviderConfig = {
     apiKey: process.env.REPLICATE_API_KEY!,
     baseUrl: 'https://api.replicate.com/v1',
     models: {
-      flux1: 'black-forest-labs/flux-1-schnell',
-      sdxl: 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b',
+      flux1: 'black-forest-labs/flux-schnell',
+      'flux-kontext-pro': 'black-forest-labs/flux-kontext-pro',
+      'imagen-4': 'google/imagen-4',
+      'minimax-image-01': 'minimax/image-01',
+      'flux-1.1-pro-ultra': 'black-forest-labs/flux-1.1-pro-ultra',
     },
     rateLimit: {
       requestsPerMinute: 60,
@@ -224,7 +264,10 @@ const config: ProviderConfig = {
     baseUrl: 'https://api.runpod.ai/v2',
     models: {
       flux1: 'flux-1-schnell',
-      sdxl: 'stable-diffusion-xl',
+      'flux-kontext-pro': 'flux-kontext-pro',
+      'imagen-4': 'imagen-4',
+      'minimax-image-01': 'minimax-image-01',
+      'flux-1.1-pro-ultra': 'flux-1.1-pro-ultra',
     },
     rateLimit: {
       requestsPerMinute: 100,
@@ -241,7 +284,7 @@ const config: ProviderConfig = {
 ```typescript
 const request = {
   prompt: 'A magical forest with glowing mushrooms',
-  model: 'sdxl' as const,
+  model: 'flux1' as const,
   width: 1024,
   height: 1024,
 }
@@ -271,19 +314,19 @@ const result = await imageService.generateImageWithFailover(request)
 const requests = [
   {
     prompt: 'A sunny beach',
-    model: 'sdxl' as const,
-    width: 1024,
-    height: 1024,
-  },
-  {
-    prompt: 'A snowy mountain',
     model: 'flux1' as const,
     width: 1024,
     height: 1024,
   },
   {
+    prompt: 'A snowy mountain',
+    model: 'flux-kontext-pro' as const,
+    width: 1024,
+    height: 1024,
+  },
+  {
     prompt: 'A bustling city',
-    model: 'sdxl' as const,
+    model: 'imagen-4' as const,
     width: 1024,
     height: 1024,
   },
@@ -312,7 +355,7 @@ console.log('Selected provider:', provider) // 'replicate'
 
 const standardRequest = {
   prompt: 'Simple illustration',
-  model: 'sdxl' as const,
+  model: 'flux1' as const,
   width: 1024,
   height: 1024,
 }
@@ -396,7 +439,7 @@ export async function POST(request: NextRequest) {
 
     const result = await imageService.generateImageWithFailover({
       prompt: body.prompt,
-      model: body.model || 'sdxl',
+      model: body.model || 'flux1',
       width: body.width || 1024,
       height: body.height || 1024,
       style: body.style,

@@ -1,6 +1,11 @@
 export type ImageGenerationProvider = 'replicate' | 'runpod' | 'modal'
 
-export type ImageModel = 'flux1' | 'sdxl'
+export type ImageModel =
+  | 'flux1'
+  | 'flux-kontext-pro'
+  | 'imagen-4'
+  | 'minimax-image-01'
+  | 'flux-1.1-pro-ultra'
 
 export type ImageStyle =
   | 'watercolor'
@@ -25,7 +30,10 @@ export interface RateLimit {
 
 export interface ProviderModelConfig {
   flux1: string
-  sdxl: string
+  'flux-kontext-pro': string
+  'imagen-4': string
+  'minimax-image-01': string
+  'flux-1.1-pro-ultra': string
 }
 
 export interface ProviderSettings {
@@ -99,7 +107,7 @@ export interface GenerationMetrics {
 export interface ReplicateResponse {
   id: string
   status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'cancelled'
-  output?: string[]
+  output?: string[] | string
   error?: string
   metrics?: {
     predict_time?: number

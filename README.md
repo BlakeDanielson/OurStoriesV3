@@ -175,7 +175,7 @@ NEXTAUTH_URL="http://localhost:3000"
 # AI Services
 OPENAI_API_KEY="sk-..."
 ANTHROPIC_API_KEY="sk-ant-..."
-REPLICATE_API_TOKEN="r8_..."
+REPLICATE_API_KEY="r8_..."
 
 # File Upload
 UPLOADTHING_SECRET="sk_live_..."

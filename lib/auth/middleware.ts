@@ -73,35 +73,30 @@ export async function authenticateMiddlewareRequest(
 ): Promise<AuthMiddlewareWithSession> {
   try {
     const supabase = createMiddlewareSupabaseClient(request, response)
+
+    // Use getUser() instead of getSession() for secure authentication
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser()
+
+    if (error || !user) {
+      return {
+        user: null,
+        session: undefined,
+        error: error?.message || 'No authenticated user',
+        isAuthenticated: false,
+      }
+    }
+
+    // Get session separately if needed (but don't rely on it for auth)
     const {
       data: { session },
-      error,
     } = await supabase.auth.getSession()
-
-    if (error || !session) {
-      return {
-        user: null,
-        session: undefined,
-        error: error?.message || 'No active session',
-        isAuthenticated: false,
-      }
-    }
-
-    // Get user from session
-    const user = session.user
-
-    if (!user) {
-      return {
-        user: null,
-        session: undefined,
-        error: 'No user in session',
-        isAuthenticated: false,
-      }
-    }
 
     return {
       user,
-      session,
+      session: session || undefined,
       error: null,
       isAuthenticated: true,
     }

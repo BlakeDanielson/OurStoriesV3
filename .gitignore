@@ -30,4 +30,7 @@ out/
 
 # Task files
 tasks.json
-tasks/ 
+tasks/
+
+# Test storage
+.test-storage/ 

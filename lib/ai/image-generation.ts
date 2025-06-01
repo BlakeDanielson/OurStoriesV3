@@ -23,6 +23,19 @@ export class ImageGenerationService {
   private requestQueues: Map<ImageGenerationProvider, GenerationQueue[]>
   private concurrentRequests: Map<ImageGenerationProvider, number>
   private rateLimitTimers: Map<ImageGenerationProvider, Date>
+  private healthStatus: Map<ImageGenerationProvider, boolean> = new Map()
+
+  // Model-specific timeout configurations (in milliseconds)
+  private readonly MODEL_TIMEOUTS: Record<string, number> = {
+    flux1: 30000, // 30 seconds - fast model
+    'flux-kontext-pro': 60000, // 60 seconds - complex editing
+    'imagen-4': 90000, // 90 seconds - premium Google model
+    'minimax-image-01': 120000, // 120 seconds - character reference support
+    'flux-1.1-pro-ultra': 90000, // 90 seconds - ultra high-resolution
+  }
+
+  // Default timeout for unknown models
+  private readonly DEFAULT_TIMEOUT = 60000 // 60 seconds
 
   constructor(config: ProviderConfig) {
     this.config = config
@@ -69,19 +82,42 @@ export class ImageGenerationService {
     try {
       const providerConfig = this.config[provider]
       if (!providerConfig) {
+        console.log(`❌ Provider ${provider} not configured`)
         return false
       }
 
       const headers = this.getAuthHeaders(provider)
-      const response = await fetch(`${providerConfig.baseUrl}/health`, {
+
+      // Use different endpoints for different providers
+      let testUrl: string
+      switch (provider) {
+        case 'replicate':
+          // Replicate doesn't have a /health endpoint, use /models instead
+          testUrl = `${providerConfig.baseUrl}/models`
+          break
+        case 'runpod':
+          testUrl = `${providerConfig.baseUrl}/health`
+          break
+        case 'modal':
+          testUrl = `${providerConfig.baseUrl}/health`
+          break
+        default:
+          console.log(`❌ Unknown provider: ${provider}`)
+          return false
+      }
+
+      console.log(`🔍 Testing ${provider} connection to: ${testUrl}`)
+      const response = await fetch(testUrl, {
         method: 'GET',
         headers,
       })
 
+      console.log(`📡 ${provider} response status: ${response.status}`)
       const isHealthy = response.ok
       this.updateProviderHealth(provider, isHealthy, Date.now())
       return isHealthy
     } catch (error) {
+      console.error(`❌ ${provider} connection test failed:`, error)
       this.updateProviderHealth(provider, false, Date.now())
       return false
     }
@@ -280,144 +316,232 @@ export class ImageGenerationService {
     enhancement: PromptEnhancement
   ): Promise<ImageGenerationResponse> {
     const providerConfig = this.config.replicate
-    const modelId = providerConfig.models[request.model]
+    const modelIdentifier = providerConfig.models[request.model]
+
+    console.log(`🔍 Replicate generation request:`, {
+      model: request.model,
+      modelIdentifier,
+      prompt: enhancement.enhancedPrompt.substring(0, 100) + '...',
+      hasApiKey: !!providerConfig.apiKey,
+    })
+
+    // Check if this is an image editing model that requires an input image
+    const isImageEditingModel = request.model === 'flux-kontext-pro'
+
+    if (isImageEditingModel) {
+      // FLUX Kontext models are image editing models, not text-to-image generation models
+      // They require an input image to edit, which we don't have in batch generation
+      throw new Error(
+        `${request.model} is an image editing model that requires an input image. Use FLUX.1 Schnell (flux1) or other text-to-image models for batch generation instead.`
+      )
+    }
 
     const headers = this.getAuthHeaders('replicate')
+
+    // Determine the correct output format based on the model
+    let outputFormat = 'webp'
+    if (
+      request.model === 'flux-1.1-pro-ultra' ||
+      request.model === 'imagen-4'
+    ) {
+      outputFormat = 'jpg' // These models only support jpg/png, not webp
+    }
+
+    // Build input parameters based on model capabilities
+    const baseInput = {
+      prompt: enhancement.enhancedPrompt,
+      ...(request.seed && { seed: request.seed }),
+    }
+
+    // Model-specific input parameters
+    let modelInput: any = { ...baseInput }
+
+    if (request.model === 'flux1') {
+      // FLUX.1 Schnell specific parameters
+      modelInput = {
+        ...baseInput,
+        width: request.width,
+        height: request.height,
+        num_outputs: 1,
+        aspect_ratio: '1:1',
+        output_format: outputFormat,
+        output_quality: 80,
+        go_fast: true,
+        disable_safety_checker: false,
+        ...(request.steps && {
+          num_inference_steps: Math.min(request.steps, 4),
+        }),
+      }
+    } else if (request.model === 'flux-1.1-pro-ultra') {
+      // FLUX 1.1 Pro Ultra specific parameters
+      modelInput = {
+        ...baseInput,
+        aspect_ratio: '1:1',
+        output_format: outputFormat, // jpg or png only
+        safety_tolerance: 2, // Default safety level
+        raw: false, // Use processed mode by default
+      }
+    } else if (request.model === 'imagen-4') {
+      // Imagen 4 specific parameters
+      modelInput = {
+        ...baseInput,
+        aspect_ratio: '1:1',
+        output_format: outputFormat,
+        safety_filter_level: 'block_only_high',
+      }
+    } else {
+      // Default parameters for other models
+      modelInput = {
+        ...baseInput,
+        width: request.width,
+        height: request.height,
+        num_outputs: 1,
+        aspect_ratio: '1:1',
+        output_format: outputFormat,
+        output_quality: 80,
+        disable_safety_checker: false,
+      }
+    }
+
+    // Use the correct Replicate API format with version hash
+    const requestBody = {
+      version: modelIdentifier, // Use version instead of model
+      input: modelInput,
+    }
+
+    console.log(`📤 Replicate API request:`, {
+      url: `${providerConfig.baseUrl}/predictions`,
+      model: request.model,
+      version: modelIdentifier,
+      inputKeys: Object.keys(requestBody.input),
+      outputFormat: requestBody.input.output_format,
+      aspectRatio: requestBody.input.aspect_ratio,
+    })
 
     // Start prediction
     const startResponse = await fetch(`${providerConfig.baseUrl}/predictions`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        version: modelId,
-        input: {
-          prompt: enhancement.enhancedPrompt,
-          negative_prompt: enhancement.negativePrompt,
-          width: request.width,
-          height: request.height,
-          num_inference_steps: request.steps || 50,
-          guidance_scale: request.guidanceScale || 7.5,
-          seed: request.seed,
-        },
-      }),
+      body: JSON.stringify(requestBody),
     })
 
     if (!startResponse.ok) {
-      const error = await startResponse.json()
-      throw new Error(error.error || 'Failed to start prediction')
+      const errorText = await startResponse.text()
+      console.error(`❌ Replicate prediction start failed:`, {
+        status: startResponse.status,
+        statusText: startResponse.statusText,
+        error: errorText,
+      })
+      throw new Error(
+        `Replicate prediction failed: ${startResponse.status} ${errorText}`
+      )
     }
 
-    const prediction = (await startResponse.json()) as ReplicateResponse
+    const prediction = await startResponse.json()
+    console.log(`✅ Replicate prediction started:`, {
+      id: prediction.id,
+      status: prediction.status,
+    })
 
-    // In test mode, return immediately with mock data
-    if (process.env.NODE_ENV === 'test') {
-      return {
-        id: prediction.id,
-        status: 'succeeded',
-        imageUrl: 'https://example.com/generated-image.jpg',
-        provider: 'replicate',
-        model: request.model,
-        generationTime: 2.5,
-        metadata: {
-          prompt: request.prompt,
-          width: request.width,
-          height: request.height,
-          style: request.style,
-          negativePrompt: request.negativePrompt,
-          qualityEnhancers: request.qualityEnhancers,
-          seed: request.seed,
-          steps: request.steps,
-          guidanceScale: request.guidanceScale,
-          loraWeights: request.loraWeights,
-        },
+    // Poll for completion
+    let attempts = 0
+    const maxAttempts = 60 // 5 minutes max
+
+    while (
+      prediction.status === 'starting' ||
+      prediction.status === 'processing'
+    ) {
+      if (attempts >= maxAttempts) {
+        throw new Error('Replicate prediction timed out')
       }
-    }
 
-    // Poll for completion in production
-    return this.pollReplicateStatus(prediction.id, request, 'replicate')
-  }
+      await new Promise(resolve => setTimeout(resolve, 5000)) // Wait 5 seconds
 
-  private async pollReplicateStatus(
-    predictionId: string,
-    request: ImageGenerationRequest,
-    provider: ImageGenerationProvider
-  ): Promise<ImageGenerationResponse> {
-    const providerConfig = this.config.replicate
-    const headers = this.getAuthHeaders('replicate')
-    const timeout = 30000 // 30 seconds
-    const startTime = Date.now()
-
-    while (Date.now() - startTime < timeout) {
-      const response = await fetch(
-        `${providerConfig.baseUrl}/predictions/${predictionId}`,
+      const pollResponse = await fetch(
+        `${providerConfig.baseUrl}/predictions/${prediction.id}`,
         {
           headers,
         }
       )
 
-      if (!response.ok) {
-        throw new Error('Failed to check prediction status')
+      if (!pollResponse.ok) {
+        throw new Error(`Failed to poll prediction: ${pollResponse.status}`)
       }
 
-      const prediction = (await response.json()) as ReplicateResponse
+      const updatedPrediction = await pollResponse.json()
+      Object.assign(prediction, updatedPrediction)
 
-      if (prediction.status === 'succeeded') {
-        return {
-          id: prediction.id,
-          status: 'succeeded',
-          imageUrl: prediction.output?.[0],
-          provider,
-          model: request.model,
-          generationTime: prediction.metrics?.predict_time,
-          metadata: {
-            prompt: request.prompt,
-            width: request.width,
-            height: request.height,
-            style: request.style,
-            negativePrompt: request.negativePrompt,
-            qualityEnhancers: request.qualityEnhancers,
-            seed: request.seed,
-            steps: request.steps,
-            guidanceScale: request.guidanceScale,
-            loraWeights: request.loraWeights,
-          },
-        }
-      }
-
-      if (prediction.status === 'failed') {
-        throw new Error(prediction.error || 'Generation failed')
-      }
-
-      // For testing, if we get a 'starting' status, immediately return success
-      // This allows tests to complete without infinite polling
-      if (process.env.NODE_ENV === 'test' && prediction.status === 'starting') {
-        return {
-          id: prediction.id,
-          status: 'succeeded',
-          imageUrl: 'https://example.com/generated-image.jpg',
-          provider,
-          model: request.model,
-          generationTime: 2.5,
-          metadata: {
-            prompt: request.prompt,
-            width: request.width,
-            height: request.height,
-            style: request.style,
-            negativePrompt: request.negativePrompt,
-            qualityEnhancers: request.qualityEnhancers,
-            seed: request.seed,
-            steps: request.steps,
-            guidanceScale: request.guidanceScale,
-            loraWeights: request.loraWeights,
-          },
-        }
-      }
-
-      // Wait before next poll
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log(
+        `🔄 Replicate prediction status: ${prediction.status} (attempt ${attempts + 1})`
+      )
+      attempts++
     }
 
-    throw new Error('Generation timeout')
+    if (prediction.status === 'failed') {
+      console.error(`❌ Replicate prediction failed:`, prediction.error)
+      throw new Error(`Replicate prediction failed: ${prediction.error}`)
+    }
+
+    if (
+      prediction.status !== 'succeeded' ||
+      !prediction.output ||
+      prediction.output.length === 0
+    ) {
+      throw new Error('Replicate prediction did not produce output')
+    }
+
+    // Extract image URL based on model and output format
+    let imageUrl: string
+
+    if (Array.isArray(prediction.output)) {
+      // Most models return an array of URLs
+      imageUrl = prediction.output[0]
+    } else if (typeof prediction.output === 'string') {
+      // Some models might return a single URL string (like FLUX 1.1 Pro Ultra)
+      imageUrl = prediction.output
+    } else if (prediction.output && typeof prediction.output === 'object') {
+      // Some models might return an object with the URL in a property
+      imageUrl =
+        prediction.output.url ||
+        prediction.output.image_url ||
+        prediction.output.imageUrl ||
+        prediction.output[0]
+    } else {
+      throw new Error(
+        `Unexpected output format from ${request.model}: ${typeof prediction.output}`
+      )
+    }
+
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      throw new Error(`No valid image URL found in output for ${request.model}`)
+    }
+
+    console.log(`✅ Replicate generation completed:`, {
+      id: prediction.id,
+      imageUrl: imageUrl.substring(0, 100) + '...',
+    })
+
+    return {
+      id: prediction.id,
+      status: 'succeeded',
+      imageUrl,
+      provider: 'replicate',
+      model: request.model,
+      generationTime: prediction.metrics?.predict_time
+        ? Math.round(prediction.metrics.predict_time * 1000)
+        : 0,
+      metadata: {
+        prompt: enhancement.enhancedPrompt,
+        width: request.width,
+        height: request.height,
+        style: request.style,
+        negativePrompt: request.negativePrompt,
+        seed: request.seed,
+        steps: request.steps,
+        guidanceScale: request.guidanceScale,
+      },
+      cost: 0.003, // Approximate cost for FLUX Schnell
+    }
   }
 
   private async generateWithRunPod(
@@ -486,8 +610,12 @@ export class ImageGenerationService {
   ): Promise<ImageGenerationResponse> {
     const providerConfig = this.config.runpod
     const headers = this.getAuthHeaders('runpod')
-    const timeout = 30000 // 30 seconds
+    const timeout = this.MODEL_TIMEOUTS[request.model] || this.DEFAULT_TIMEOUT
     const startTime = Date.now()
+
+    console.log(
+      `🔄 Starting RunPod polling for ${request.model} with ${timeout / 1000}s timeout`
+    )
 
     while (Date.now() - startTime < timeout) {
       const response = await fetch(
@@ -502,6 +630,11 @@ export class ImageGenerationService {
       }
 
       const job = (await response.json()) as RunPodResponse
+      const elapsedTime = (Date.now() - startTime) / 1000
+
+      console.log(
+        `⏱️ RunPod ${request.model} status: ${job.status} (${elapsedTime.toFixed(1)}s elapsed)`
+      )
 
       if (job.status === 'COMPLETED') {
         return {
@@ -558,7 +691,9 @@ export class ImageGenerationService {
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
 
-    throw new Error('Generation timeout')
+    throw new Error(
+      `Generation timeout after ${timeout / 1000}s for model ${request.model}. This model may require more time to generate images.`
+    )
   }
 
   async generateImageWithFailover(
@@ -638,16 +773,26 @@ export class ImageGenerationService {
   selectOptimalProvider(
     request: ImageGenerationRequest
   ): ImageGenerationProvider {
-    // High-quality requests (FLUX.1) prefer Replicate for reliability
+    // Always use Replicate for now since RunPod is having issues
+    return 'replicate'
+
+    // Original provider selection logic (disabled)
+    /*
+    // High-quality requests (FLUX models, Imagen-4) prefer Replicate for reliability
     if (
       request.model === 'flux1' ||
+      request.model === 'flux-kontext-pro' ||
+      request.model === 'flux-1.1-pro-ultra' ||
+      request.model === 'imagen-4' ||
+      request.model === 'minimax-image-01' ||
       request.qualityEnhancers?.includes('high_detail')
     ) {
       return 'replicate'
     }
 
-    // Standard requests (SDXL) prefer RunPod for cost savings
+    // Standard requests prefer RunPod for cost savings
     return 'runpod'
+    */
   }
 
   calculateGenerationCost(response: ImageGenerationResponse): number {
@@ -657,15 +802,24 @@ export class ImageGenerationService {
     > = {
       replicate: {
         flux1: 0.035,
-        sdxl: 0.03,
+        'flux-kontext-pro': 0.06, // Based on Replicate pricing
+        'imagen-4': 0.08, // Premium Google model
+        'minimax-image-01': 0.05, // Mid-tier pricing
+        'flux-1.1-pro-ultra': 0.06, // Based on Replicate pricing
       },
       runpod: {
         flux1: 0.032,
-        sdxl: 0.025,
+        'flux-kontext-pro': 0.055,
+        'imagen-4': 0.075,
+        'minimax-image-01': 0.045,
+        'flux-1.1-pro-ultra': 0.055,
       },
       modal: {
         flux1: 0.03,
-        sdxl: 0.022,
+        'flux-kontext-pro': 0.05,
+        'imagen-4': 0.07,
+        'minimax-image-01': 0.04,
+        'flux-1.1-pro-ultra': 0.05,
       },
     }
 

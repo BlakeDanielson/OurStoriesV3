@@ -29,8 +29,11 @@ describe('ImageGenerationService', () => {
         apiKey: 'test-replicate-key',
         baseUrl: 'https://api.replicate.com/v1',
         models: {
-          flux1: 'black-forest-labs/flux-1-schnell',
-          sdxl: 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b',
+          flux1: 'black-forest-labs/flux-schnell',
+          'flux-kontext-pro': 'black-forest-labs/flux-kontext-pro',
+          'imagen-4': 'google/imagen-4',
+          'minimax-image-01': 'minimax/image-01',
+          'flux-1.1-pro-ultra': 'black-forest-labs/flux-1.1-pro-ultra',
         },
         rateLimit: { requestsPerMinute: 60, concurrent: 5 },
       },
@@ -39,7 +42,10 @@ describe('ImageGenerationService', () => {
         baseUrl: 'https://api.runpod.ai/v2',
         models: {
           flux1: 'flux-1-schnell',
-          sdxl: 'stable-diffusion-xl',
+          'flux-kontext-pro': 'flux-kontext-pro',
+          'imagen-4': 'imagen-4',
+          'minimax-image-01': 'minimax-image-01',
+          'flux-1.1-pro-ultra': 'flux-1.1-pro-ultra',
         },
         rateLimit: { requestsPerMinute: 100, concurrent: 10 },
       },
@@ -364,10 +370,12 @@ describe('ImageGenerationService', () => {
 
         const promise = service.generateImage(request, 'replicate')
 
-        // Fast-forward past timeout (30 seconds)
+        // Fast-forward past timeout (30 seconds for flux1 model)
         jest.advanceTimersByTime(31000)
 
-        await expect(promise).rejects.toThrow('Generation timeout')
+        await expect(promise).rejects.toThrow(
+          'Generation timeout after 30s for model flux1'
+        )
 
         jest.useRealTimers()
         // Restore test mode
@@ -492,10 +500,10 @@ describe('ImageGenerationService', () => {
 
         // Check the request body contains the correct model version
         const callBody = JSON.parse((mockFetch.mock.calls[0][1] as any).body)
-        expect(callBody.version).toBe('black-forest-labs/flux-1-schnell')
+        expect(callBody.version).toBe('black-forest-labs/flux-schnell')
       })
 
-      it('should use SDXL model for cost-effective generation', async () => {
+      it('should use FLUX Kontext Pro model for image editing', async () => {
         mockFetch.mockResolvedValueOnce({
           ok: true,
           status: 200,
@@ -504,7 +512,7 @@ describe('ImageGenerationService', () => {
 
         const request: ImageGenerationRequest = {
           prompt: 'illustrated child character',
-          model: 'sdxl',
+          model: 'flux-kontext-pro',
           width: 1024,
           height: 1024,
         }
@@ -513,9 +521,7 @@ describe('ImageGenerationService', () => {
 
         // Check the request body contains the correct model version
         const callBody = JSON.parse((mockFetch.mock.calls[0][1] as any).body)
-        expect(callBody.version).toBe(
-          'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b'
-        )
+        expect(callBody.version).toBe('black-forest-labs/flux-kontext-pro')
       })
     })
 
@@ -646,10 +652,12 @@ describe('ImageGenerationService', () => {
 
         const promise = service.generateImage(request, 'replicate')
 
-        // Fast-forward past timeout (30 seconds)
+        // Fast-forward past timeout (30 seconds for flux1 model)
         jest.advanceTimersByTime(31000)
 
-        await expect(promise).rejects.toThrow('Generation timeout')
+        await expect(promise).rejects.toThrow(
+          'Generation timeout after 30s for model flux1'
+        )
 
         jest.useRealTimers()
         // Restore test mode
@@ -747,16 +755,16 @@ describe('ImageGenerationService', () => {
       const provider1 = service.selectOptimalProvider(highQualityRequest)
       expect(provider1).toBe('replicate') // FLUX.1 on Replicate
 
-      // Standard request should use SDXL
+      // Standard request should use FLUX Kontext Pro
       const standardRequest: ImageGenerationRequest = {
         prompt: 'simple illustration',
-        model: 'sdxl',
+        model: 'flux-kontext-pro',
         width: 1024,
         height: 1024,
       }
 
       const provider2 = service.selectOptimalProvider(standardRequest)
-      expect(provider2).toBe('runpod') // SDXL on RunPod for cost savings
+      expect(provider2).toBe('replicate') // FLUX Kontext Pro on Replicate
     })
 
     it('should track and report generation costs', async () => {

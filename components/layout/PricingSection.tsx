@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Check, Star, Sparkles } from 'lucide-react'
+import { Check, Star, Sparkles, Book, Users, Crown, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -10,95 +10,71 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 
-interface PricingPlan {
+interface PayPerBookOption {
   name: string
   price: string
-  yearlyPrice: string
-  period: string
-  features: string[]
   description: string
+  features: string[]
   buttonText: string
-  color: string
   isPopular?: boolean
 }
 
 interface PricingProps {
-  plans?: PricingPlan[]
+  payPerBookOptions?: PayPerBookOption[]
   title?: string
   description?: string
 }
 
 export const PricingSection = ({
-  plans = [
+  payPerBookOptions = [
     {
-      name: 'Basic',
-      price: '$9.99',
-      yearlyPrice: '$95.90',
-      period: 'month',
+      name: 'Digital Book',
+      price: '$1.99',
+      description: 'Perfect for trying out our service',
       features: [
-        '2 books per month',
-        'Basic customization',
-        'Mobile access',
-        'Download for offline reading',
-        'Email support',
+        'One personalized digital book',
+        'High-quality AI illustrations',
+        'PDF download for reading',
+        'Mobile-friendly format',
+        'Basic customization options',
       ],
-      description: 'Perfect for beginners starting their reading journey',
-      buttonText: 'Start Creating',
-      color: 'purple',
-      isPopular: false,
+      buttonText: 'Create Digital Book',
     },
     {
-      name: 'Popular',
-      price: '$19.99',
-      yearlyPrice: '$191.90',
-      period: 'month',
+      name: 'Printable PDF',
+      price: '$4.99',
+      description: 'Print at home on your own printer',
       features: [
-        '5 books per month',
-        'Advanced customization',
-        'Mobile & tablet access',
-        'Download for offline reading',
-        'Priority email support',
-        'Character personalization',
+        'One personalized printable book',
+        'High-resolution PDF (300 DPI)',
+        'Optimized for home printing',
+        'Digital copy included',
+        'Print unlimited copies',
       ],
-      description: 'Our most popular plan for growing readers',
-      buttonText: 'Start Creating',
-      color: 'blue',
+      buttonText: 'Get Printable PDF',
       isPopular: true,
     },
     {
-      name: 'Premium',
-      price: '$29.99',
-      yearlyPrice: '$287.90',
-      period: 'month',
+      name: 'Professional Print',
+      price: '$49.99',
+      description: 'Beautiful hardcover book delivered to your door',
       features: [
-        'Unlimited books',
-        'Full customization',
-        'Access on all devices',
-        'Download for offline reading',
-        '24/7 priority support',
-        'Character personalization',
-        'Audio narration',
+        'One personalized hardcover book',
+        'Premium paper quality',
+        'Professional binding & finish',
+        'Free shipping included',
+        'Digital + printable PDF included',
       ],
-      description: 'The ultimate experience for avid young readers',
-      buttonText: 'Start Creating',
-      color: 'green',
-      isPopular: false,
+      buttonText: 'Order Print Book',
     },
   ],
-  title = 'Choose Your Adventure',
-  description = 'Unlock magical stories for your little ones with our flexible pricing plans',
+  title = 'Simple, Transparent Pricing',
+  description = 'Create magical personalized books for your children - pay per book or subscribe for unlimited creativity',
 }: PricingProps) => {
   const [isMonthly, setIsMonthly] = useState(true)
-  const switchRef = useRef<HTMLButtonElement>(null)
 
   const handleToggle = (checked: boolean) => {
     setIsMonthly(!checked)
-  }
-
-  const gradients = {
-    purple: 'bg-gradient-to-r from-purple-200 via-violet-400 to-indigo-600',
-    blue: 'bg-gradient-to-r from-indigo-500 to-blue-500',
-    green: 'bg-gradient-to-r from-emerald-500 to-emerald-900',
   }
 
   return (
@@ -136,194 +112,308 @@ export const PricingSection = ({
           </motion.p>
         </header>
 
-        {/* Billing Toggle */}
-        <div className="flex justify-center mb-10">
-          <fieldset className="flex items-center gap-4 p-2 rounded-full bg-background border shadow-sm">
-            <legend className="sr-only">Choose billing frequency</legend>
-            <span
-              className={cn(
-                'font-medium',
-                isMonthly ? 'text-primary' : 'text-muted-foreground'
-              )}
-              id="monthly-label"
-            >
-              Monthly
-            </span>
-            <Label className="cursor-pointer" htmlFor="billing-toggle">
-              <span className="sr-only">
-                Switch to {isMonthly ? 'yearly' : 'monthly'} billing
-              </span>
-              <Switch
-                id="billing-toggle"
-                ref={switchRef as any}
-                checked={!isMonthly}
-                onCheckedChange={handleToggle}
-                aria-describedby="billing-description"
-                className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              />
-            </Label>
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'font-medium',
-                  !isMonthly ? 'text-primary' : 'text-muted-foreground'
-                )}
-                id="yearly-label"
+        {/* Pay Per Book Options - Primary */}
+        <div className="space-y-12">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold mb-2">Pay Per Book</h3>
+            <p className="text-muted-foreground">
+              Perfect for occasional storytelling
+            </p>
+          </div>
+
+          <div
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto"
+            role="region"
+            aria-label="Pay per book options"
+          >
+            {payPerBookOptions.map((option, index) => (
+              <motion.article
+                key={index}
+                initial={{ y: 20, opacity: 0 }}
+                whileInView={{ y: 0, opacity: 1 }}
+                transition={{
+                  duration: 0.5,
+                  delay: index * 0.1,
+                  ease: 'easeOut',
+                  reduce: { duration: 0.1, delay: 0 },
+                }}
+                viewport={{ once: true }}
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow:
+                    '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                  transition: { duration: 0.2 },
+                }}
+                className="flex motion-reduce:transform-none"
               >
-                Yearly
-              </span>
-              <Badge
-                variant="outline"
-                className="bg-yellow-100 text-yellow-800 border-yellow-300"
-                aria-label="Save 20% with yearly billing"
-              >
-                Save 20%
-              </Badge>
-            </div>
-            <div id="billing-description" className="sr-only">
-              {isMonthly
-                ? 'Currently showing monthly prices'
-                : 'Currently showing yearly prices with 20% savings'}
-            </div>
-          </fieldset>
+                <Card
+                  className={cn(
+                    'relative flex flex-col overflow-hidden rounded-2xl border-2 w-full focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+                    option.isPopular
+                      ? 'border-green-500 shadow-lg'
+                      : 'border-border'
+                  )}
+                >
+                  {option.isPopular && (
+                    <div
+                      className="absolute top-0 right-0 bg-green-500 py-1 px-3 rounded-bl-xl rounded-tr-xl flex items-center"
+                      role="img"
+                      aria-label="Most popular option"
+                    >
+                      <Crown
+                        className="text-white h-4 w-4 mr-1 fill-current"
+                        aria-hidden="true"
+                      />
+                      <span className="text-white text-sm font-semibold">
+                        Most Popular
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="p-6 flex-1 flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4
+                        className="text-xl font-bold"
+                        id={`option-${index}-title`}
+                      >
+                        {option.name}
+                      </h4>
+                      <span className="text-3xl font-bold text-primary">
+                        {option.price}
+                      </span>
+                    </div>
+
+                    <p className="text-muted-foreground mb-6 flex-1">
+                      {option.description}
+                    </p>
+
+                    <ul
+                      className="space-y-3 mb-8"
+                      role="list"
+                      aria-labelledby={`option-${index}-title`}
+                    >
+                      {option.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-start">
+                          <Check
+                            className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span className="text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Button
+                      className={cn(
+                        'w-full mt-auto focus:outline-none focus:ring-2 focus:ring-ring focus-ring-offset-2',
+                        option.isPopular
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-primary hover:bg-primary/90'
+                      )}
+                      size="lg"
+                    >
+                      {option.buttonText}
+                    </Button>
+                  </div>
+                </Card>
+              </motion.article>
+            ))}
+          </div>
         </div>
 
-        {/* Pricing Cards */}
-        <div
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8"
-          role="region"
-          aria-label="Pricing plans"
-        >
-          {plans.map((plan, index) => (
+        {/* Pro Subscription - Secondary */}
+        <div className="mt-20 space-y-8">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold mb-2">
+              For Frequent Storytellers
+            </h3>
+            <p className="text-muted-foreground">
+              Unlimited books with premium features
+            </p>
+          </div>
+
+          <div className="max-w-2xl mx-auto">
             <motion.article
-              key={index}
               initial={{ y: 20, opacity: 0 }}
               whileInView={{ y: 0, opacity: 1 }}
               transition={{
                 duration: 0.5,
-                delay: index * 0.1,
                 ease: 'easeOut',
-                reduce: { duration: 0.1, delay: 0 },
+                reduce: { duration: 0.1 },
               }}
               viewport={{ once: true }}
               whileHover={{
-                scale: 1.03,
+                scale: 1.02,
                 boxShadow:
                   '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
                 transition: { duration: 0.2 },
               }}
               className="flex motion-reduce:transform-none"
             >
-              <Card
-                className={cn(
-                  'relative flex flex-col overflow-hidden rounded-2xl border-2 w-full focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
-                  plan.isPopular ? 'border-primary' : 'border-border'
-                )}
-              >
+              <Card className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-purple-500 shadow-lg w-full focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
                 <div
-                  className={cn(
-                    'absolute inset-0 opacity-10',
-                    gradients[plan.color as keyof typeof gradients]
-                  )}
+                  className="absolute inset-0 opacity-5 bg-gradient-to-r from-purple-500 to-indigo-600"
                   aria-hidden="true"
                 />
 
-                {plan.isPopular && (
-                  <div
-                    className="absolute top-0 right-0 bg-primary py-1 px-3 rounded-bl-xl rounded-tr-xl flex items-center"
-                    role="img"
-                    aria-label="Most popular plan"
-                  >
-                    <Star
-                      className="text-primary-foreground h-4 w-4 mr-1 fill-current"
-                      aria-hidden="true"
-                    />
-                    <span className="text-primary-foreground text-sm font-semibold">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-
-                <div className="p-6 flex-1 flex flex-col z-10">
-                  <div
-                    className={cn(
-                      'w-12 h-12 rounded-full mb-4 flex items-center justify-center',
-                      gradients[plan.color as keyof typeof gradients]
-                    )}
+                <div
+                  className="absolute top-0 right-0 bg-purple-500 py-1 px-3 rounded-bl-xl rounded-tr-xl flex items-center"
+                  role="img"
+                  aria-label="Pro subscription plan"
+                >
+                  <Zap
+                    className="text-white h-4 w-4 mr-1 fill-current"
                     aria-hidden="true"
-                  >
-                    <Sparkles className="h-6 w-6 text-white" />
-                  </div>
+                  />
+                  <span className="text-white text-sm font-semibold">
+                    Pro Plan
+                  </span>
+                </div>
 
-                  <h3
-                    className="text-xl font-bold mb-2"
-                    id={`plan-${index}-title`}
-                  >
-                    {plan.name}
-                  </h3>
-
-                  <div className="mt-2 mb-6">
-                    <div className="flex items-baseline">
-                      <span
-                        className="text-4xl font-bold"
-                        aria-label={`${isMonthly ? plan.price : plan.yearlyPrice} per ${plan.period}`}
-                      >
-                        {isMonthly ? plan.price : plan.yearlyPrice}
-                      </span>
-                      <span className="text-muted-foreground ml-1">
-                        /{isMonthly ? plan.period : 'year'}
-                      </span>
+                <div className="p-8 flex-1 flex flex-col z-10">
+                  <div className="flex items-center mb-6">
+                    <div
+                      className="w-12 h-12 rounded-full mr-4 flex items-center justify-center bg-gradient-to-r from-purple-500 to-indigo-600"
+                      aria-hidden="true"
+                    >
+                      <Sparkles className="h-6 w-6 text-white" />
                     </div>
-                    {!isMonthly && (
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Billed annually
-                      </div>
-                    )}
+                    <div>
+                      <h4 className="text-2xl font-bold">Pro Subscription</h4>
+                      <p className="text-muted-foreground">
+                        Unlimited creativity
+                      </p>
+                    </div>
                   </div>
 
-                  <p className="text-muted-foreground mb-6 flex-1">
-                    {plan.description}
+                  <div className="mb-6">
+                    <div className="flex items-baseline">
+                      <span className="text-4xl font-bold">$10.00</span>
+                      <span className="text-muted-foreground ml-1">/month</span>
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Cancel anytime • No long-term commitment
+                    </div>
+                  </div>
+
+                  <p className="text-muted-foreground mb-6">
+                    Perfect for families who love creating stories regularly
+                    with premium AI and unlimited books.
                   </p>
 
-                  <ul
-                    className="space-y-3 mb-8"
-                    role="list"
-                    aria-labelledby={`plan-${index}-title`}
-                  >
-                    {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-start">
-                        <Check
-                          className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
-                          aria-hidden="true"
-                        />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
+                  <ul className="space-y-3 mb-8" role="list">
+                    <li className="flex items-start">
+                      <Check
+                        className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="text-sm">
+                        <strong>Unlimited digital books</strong>
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check
+                        className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="text-sm">
+                        <strong>Unlimited printable PDFs</strong>
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check
+                        className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="text-sm">
+                        Professional print books at cost ($49.99 each)
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check
+                        className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="text-sm">
+                        Premium AI models (GPT-4, Claude)
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check
+                        className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="text-sm">
+                        Advanced story prompts & templates
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check
+                        className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="text-sm">Up to 5 child profiles</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check
+                        className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="text-sm">Priority support</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check
+                        className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="text-sm">
+                        Early access to new features
+                      </span>
+                    </li>
                   </ul>
 
                   <Button
-                    className={cn(
-                      'w-full mt-auto focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-                      plan.isPopular
-                        ? 'bg-primary hover:bg-primary/90'
-                        : 'bg-secondary hover:bg-secondary/80'
-                    )}
+                    className="w-full mt-auto bg-purple-600 hover:bg-purple-700 text-white focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     size="lg"
-                    aria-describedby={`plan-${index}-description`}
                   >
-                    {plan.buttonText}
+                    Start Pro Subscription
                   </Button>
-
-                  <div id={`plan-${index}-description`} className="sr-only">
-                    {plan.name} plan: {plan.description}. Price:{' '}
-                    {isMonthly ? plan.price : plan.yearlyPrice} per{' '}
-                    {isMonthly ? plan.period : 'year'}. Features include:{' '}
-                    {plan.features.join(', ')}.
-                  </div>
                 </div>
               </Card>
             </motion.article>
-          ))}
+          </div>
+        </div>
+
+        {/* Value Comparison */}
+        <div className="mt-16 text-center p-6 bg-muted/30 rounded-xl">
+          <h4 className="text-lg font-semibold mb-4">
+            Which option is right for you?
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-sm">
+            <div className="p-4 bg-background rounded-lg border">
+              <h5 className="font-semibold text-foreground mb-2">
+                Pay Per Book
+              </h5>
+              <p className="text-muted-foreground">
+                Perfect if you create 1-2 books per month. Try our service
+                risk-free starting at just $1.99.
+              </p>
+            </div>
+            <div className="p-4 bg-background rounded-lg border">
+              <h5 className="font-semibold text-foreground mb-2">
+                Pro Subscription
+              </h5>
+              <p className="text-muted-foreground">
+                Best value if you create 3+ books per month. Unlimited digital
+                books and premium features for serious storytellers.
+              </p>
+            </div>
+          </div>
+          <div className="mt-6">
+            <Button variant="outline" size="sm">
+              Still have questions? Contact us
+            </Button>
+          </div>
         </div>
       </div>
     </section>
