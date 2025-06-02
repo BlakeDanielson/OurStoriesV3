@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { FlipBook } from '@/components/features'
+import { FeedbackWidget } from '@/components/features/feedback-widget'
 
 interface BookGenerationRequest {
   childProfileId: string
@@ -162,20 +163,44 @@ function BookViewer({ pages, title }: BookViewerProps) {
 
       {/* FlipBook View */}
       {viewMode === 'flipbook' && (
-        <FlipBook
-          pages={pages.map(page => ({
-            id: page.id || `page-${page.page_number}`,
-            page_number: page.page_number,
-            content: page.content,
-            image_url: page.image_url,
-            ai_metadata: page.ai_metadata,
-          }))}
-          title={title}
-          width={400}
-          height={600}
-          onPageChange={pageIndex => setCurrentPage(pageIndex)}
-          className="mx-auto"
-        />
+        <div className="space-y-4">
+          <FlipBook
+            pages={pages.map(page => ({
+              id: page.id || `page-${page.page_number}`,
+              page_number: page.page_number,
+              content: page.content,
+              image_url: page.image_url,
+              ai_metadata: page.ai_metadata,
+            }))}
+            title={title}
+            width={400}
+            height={600}
+            onPageChange={(pageIndex: number) => setCurrentPage(pageIndex)}
+            className="mx-auto"
+          />
+
+          {/* Book-level feedback */}
+          <div className="max-w-md mx-auto p-4 bg-gray-50 rounded-lg">
+            <FeedbackWidget
+              contentType="book"
+              contentId="demo-book-id"
+              bookId="demo-book-id"
+              showCounts={true}
+              title="Rate this book"
+              className="mb-4"
+            />
+
+            {/* Current page feedback */}
+            <FeedbackWidget
+              contentType="page"
+              contentId={`demo-page-${currentPage + 1}`}
+              bookId="demo-book-id"
+              pageNumber={currentPage + 1}
+              showCounts={true}
+              title={`Rate page ${currentPage + 1}`}
+            />
+          </div>
+        </div>
       )}
 
       {/* Traditional Views */}
@@ -219,9 +244,19 @@ function BookViewer({ pages, title }: BookViewerProps) {
                     )}
                   </div>
 
-                  <div className="text-base text-gray-700 leading-relaxed max-h-40 overflow-y-auto">
+                  <div className="text-base text-gray-700 leading-relaxed max-h-40 overflow-y-auto mb-4">
                     {currentPageData?.content || 'No content available'}
                   </div>
+
+                  {/* Page feedback for single view */}
+                  <FeedbackWidget
+                    contentType="page"
+                    contentId={`demo-page-${currentPage + 1}`}
+                    bookId="demo-book-id"
+                    pageNumber={currentPage + 1}
+                    showCounts={true}
+                    title="Rate this page"
+                  />
                 </div>
               </div>
             ) : (
@@ -259,9 +294,19 @@ function BookViewer({ pages, title }: BookViewerProps) {
                         )}
                       </div>
 
-                      <div className="text-sm text-gray-700 leading-relaxed max-h-32 overflow-y-auto">
+                      <div className="text-sm text-gray-700 leading-relaxed max-h-32 overflow-y-auto mb-3">
                         {currentPageData?.content || 'No content available'}
                       </div>
+
+                      {/* Left page feedback */}
+                      <FeedbackWidget
+                        contentType="page"
+                        contentId={`demo-page-${currentPage + 1}`}
+                        bookId="demo-book-id"
+                        pageNumber={currentPage + 1}
+                        showCounts={false}
+                        className="text-xs"
+                      />
                     </div>
                   </div>
 
@@ -297,10 +342,20 @@ function BookViewer({ pages, title }: BookViewerProps) {
                           )}
                         </div>
 
-                        <div className="text-sm text-gray-700 leading-relaxed max-h-32 overflow-y-auto">
+                        <div className="text-sm text-gray-700 leading-relaxed max-h-32 overflow-y-auto mb-3">
                           {pages[currentPage + 1]?.content ||
                             'No content available'}
                         </div>
+
+                        {/* Right page feedback */}
+                        <FeedbackWidget
+                          contentType="page"
+                          contentId={`demo-page-${currentPage + 2}`}
+                          bookId="demo-book-id"
+                          pageNumber={currentPage + 2}
+                          showCounts={false}
+                          className="text-xs"
+                        />
                       </div>
                     </div>
                   )}
@@ -309,47 +364,38 @@ function BookViewer({ pages, title }: BookViewerProps) {
             )}
           </div>
 
-          {/* Navigation Controls (only for non-flipbook modes) */}
-          <div className="flex justify-between items-center mt-4">
+          {/* Book-level feedback for traditional views */}
+          <div className="max-w-md mx-auto mt-4 p-4 bg-gray-50 rounded-lg">
+            <FeedbackWidget
+              contentType="book"
+              contentId="demo-book-id"
+              bookId="demo-book-id"
+              showCounts={true}
+              title="Rate this book"
+            />
+          </div>
+
+          {/* Navigation Controls */}
+          <div className="flex justify-center items-center gap-4 mt-6">
             <button
               onClick={prevPage}
               disabled={!canGoBack}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              <span>←</span>
-              Previous
+              Previous Page
             </button>
 
-            {/* Page Thumbnails */}
-            <div className="flex gap-1 max-w-md overflow-x-auto">
-              {pages.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToPage(index)}
-                  className={`w-8 h-10 text-xs rounded border-2 flex items-center justify-center ${
-                    index === currentPage
-                      ? 'border-blue-500 bg-blue-100 text-blue-700'
-                      : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
-                  }`}
-                >
-                  {index + 1}
-                </button>
-              ))}
-            </div>
+            <span className="text-sm text-gray-600">
+              Page {currentPage + 1} of {totalPages}
+            </span>
 
             <button
               onClick={nextPage}
               disabled={!canGoForward}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              Next
-              <span>→</span>
+              Next Page
             </button>
-          </div>
-
-          {/* Keyboard Navigation Hint */}
-          <div className="text-center mt-2 text-xs text-gray-500">
-            Use ← → arrow keys to navigate pages
           </div>
         </>
       )}

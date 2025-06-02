@@ -6,6 +6,8 @@ import {
   authenticateMiddlewareRequest,
 } from '@/lib/auth/middleware'
 import { SECURITY_HEADERS, shouldEnforceHTTPS } from '@/lib/utils/security'
+import { rateLimitMiddleware } from '@/lib/rate-limiting/middleware'
+import { enhancedCSRFMiddleware } from '@/lib/csrf/middleware'
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next()
@@ -31,6 +33,18 @@ export async function middleware(request: NextRequest) {
   const authResult = await authenticateMiddlewareRequest(request, response)
   const isAuthenticated = authResult.isAuthenticated
   const user = authResult.user
+
+  // Apply rate limiting for API routes
+  const rateLimitResponse = await rateLimitMiddleware(request, user?.id)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
+  // Apply CSRF protection for API routes
+  const csrfResponse = await enhancedCSRFMiddleware(request)
+  if (csrfResponse) {
+    return csrfResponse
+  }
 
   // If user is not authenticated and trying to access protected route
   if (!isAuthenticated && !isPublic) {

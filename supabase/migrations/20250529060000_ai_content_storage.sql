@@ -350,7 +350,7 @@ CREATE OR REPLACE FUNCTION "public"."get_conversation_with_history"(
     "session_id" "uuid",
     "user_id" "uuid"
 ) RETURNS TABLE(
-    "session_id" "uuid",
+    "id" "uuid",
     "session_name" "text",
     "context_summary" "text",
     "total_entries" integer,
@@ -362,7 +362,7 @@ CREATE OR REPLACE FUNCTION "public"."get_conversation_with_history"(
 BEGIN
     RETURN QUERY
     SELECT 
-        cs.id as session_id,
+        cs.id,
         cs.session_name,
         cs.context_summary,
         cs.total_entries,

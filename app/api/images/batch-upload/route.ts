@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       .eq('id', bookId)
       .single()
 
-    if (bookError || !book || book.child_profiles.parent_id !== user.id) {
+    if (bookError || !book || book.child_profiles[0]?.parent_id !== user.id) {
       return NextResponse.json(
         { error: 'Book not found or access denied' },
         { status: 403 }

@@ -25,3 +25,10 @@ export {
   SelectValue,
 } from './select'
 export { Badge } from './badge'
+export { RegenerateButton } from './regenerate-button'
+export { RegenerationDialog } from './regeneration-dialog'
+export { ImageGallery } from './image-gallery'
+export { ToastProvider, useToast } from './toast'
+export { ProgressIndicator, useProgressSteps } from './progress-indicator'
+export { FeedbackRating } from './feedback-rating'
+export { FeedbackForm } from './feedback-form'

@@ -78,10 +78,40 @@ export const CORS_CONFIG = {
   origin:
     process.env.NODE_ENV === 'production'
       ? ['https://ourstories.vercel.app', 'https://www.ourstories.app']
-      : ['http://localhost:3000'],
+      : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'X-CSRF-Token',
+  ],
+} as const
+
+// CSRF protection configuration
+export const CSRF_CONFIG = {
+  cookieName: '__Host-csrf-token',
+  headerName: 'x-csrf-token',
+  formFieldName: '_csrf',
+  secretLength: 32,
+  tokenLength: 32,
+  cookieOptions: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    path: '/',
+    maxAge: 60 * 60 * 24, // 24 hours
+  },
+  // Paths that don't require CSRF protection
+  skipPaths: [
+    '/api/auth/',
+    '/api/webhooks/',
+    '/api/health',
+    '/api/csrf-token', // Endpoint to get CSRF token
+  ],
+  // Methods that require CSRF protection
+  protectedMethods: ['POST', 'PUT', 'PATCH', 'DELETE'],
 } as const
 
 // Security validation helpers
@@ -92,6 +122,45 @@ export const isValidOrigin = (origin: string | null): boolean => {
   return Array.isArray(allowedOrigins)
     ? allowedOrigins.includes(origin)
     : allowedOrigins === origin
+}
+
+// Enhanced origin validation for CSRF protection
+export const validateRequestOrigin = (request: Request): boolean => {
+  const origin = request.headers.get('origin')
+  const referer = request.headers.get('referer')
+  const host = request.headers.get('host')
+
+  // For same-origin requests, origin might be null
+  if (!origin && !referer) {
+    return true // Allow same-origin requests
+  }
+
+  // Get allowed origins
+  const allowedOrigins = [...CORS_CONFIG.origin]
+  if (host) {
+    allowedOrigins.push(`https://${host}`)
+    if (process.env.NODE_ENV === 'development') {
+      allowedOrigins.push(`http://${host}`)
+    }
+  }
+
+  // Check origin
+  if (origin && allowedOrigins.includes(origin)) {
+    return true
+  }
+
+  // Check referer as fallback
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer)
+      const refererOrigin = `${refererUrl.protocol}//${refererUrl.host}`
+      return allowedOrigins.includes(refererOrigin)
+    } catch {
+      return false
+    }
+  }
+
+  return false
 }
 
 export const sanitizeInput = (input: string): string => {
@@ -108,6 +177,7 @@ export const getSecurityConfig = () => ({
   enforceHTTPS: process.env.NODE_ENV === 'production',
   enableCSP: true,
   enableRateLimit: true,
+  enableCSRF: true,
   cookieSecure: process.env.NODE_ENV === 'production',
   sessionTimeout: 60 * 60 * 24 * 7, // 7 days in seconds
 })

@@ -7,6 +7,8 @@ import {
   GenerationMetrics,
   ReplicateResponse,
   RunPodResponse,
+  OpenAIResponse,
+  OpenAIImageEditRequest,
   CostCalculation,
   PromptEnhancement,
   GenerationQueue,
@@ -32,6 +34,9 @@ export class ImageGenerationService {
     'imagen-4': 90000, // 90 seconds - premium Google model
     'minimax-image-01': 120000, // 120 seconds - character reference support
     'flux-1.1-pro-ultra': 90000, // 90 seconds - ultra high-resolution
+    'gpt-image-1': 45000, // 45 seconds - OpenAI's newest model
+    'dall-e-3': 60000, // 60 seconds - DALL-E 3
+    'dall-e-2': 30000, // 30 seconds - DALL-E 2 (faster)
   }
 
   // Default timeout for unknown models
@@ -54,6 +59,7 @@ export class ImageGenerationService {
         replicate: 0,
         runpod: 0,
         modal: 0,
+        openai: 0,
       },
     }
 
@@ -64,6 +70,9 @@ export class ImageGenerationService {
     const providers: ImageGenerationProvider[] = ['replicate', 'runpod']
     if (this.config.modal) {
       providers.push('modal')
+    }
+    if (this.config.openai) {
+      providers.push('openai')
     }
 
     providers.forEach(provider => {
@@ -100,6 +109,9 @@ export class ImageGenerationService {
           break
         case 'modal':
           testUrl = `${providerConfig.baseUrl}/health`
+          break
+        case 'openai':
+          testUrl = `${providerConfig.baseUrl}/models`
           break
         default:
           console.log(`❌ Unknown provider: ${provider}`)
@@ -141,6 +153,9 @@ export class ImageGenerationService {
         break
       case 'runpod':
       case 'modal':
+        headers['Authorization'] = `Bearer ${providerConfig.apiKey}`
+        break
+      case 'openai':
         headers['Authorization'] = `Bearer ${providerConfig.apiKey}`
         break
     }
@@ -193,6 +208,9 @@ export class ImageGenerationService {
           break
         case 'runpod':
           response = await this.generateWithRunPod(request, enhancedPrompt)
+          break
+        case 'openai':
+          response = await this.generateWithOpenAI(request, enhancedPrompt)
           break
         default:
           throw new Error(`Unsupported provider: ${provider}`)
@@ -389,6 +407,37 @@ export class ImageGenerationService {
         output_format: outputFormat,
         safety_filter_level: 'block_only_high',
       }
+    } else if (request.model === 'minimax-image-01') {
+      // MiniMax Image-01 specific parameters with character reference support
+      modelInput = {
+        ...baseInput,
+        width: request.width,
+        height: request.height,
+        num_outputs: 1,
+        aspect_ratio: '1:1',
+        output_format: outputFormat,
+        output_quality: 80,
+      }
+
+      // Add character reference if provided
+      if (
+        request.characterReferences &&
+        request.characterReferences.length > 0
+      ) {
+        const characterRef = request.characterReferences[0] // Use first character reference
+        modelInput.subject_reference = characterRef.url
+
+        // Add character consistency weight if specified
+        if (request.characterConsistency) {
+          modelInput.subject_weight = request.characterConsistency
+        }
+
+        console.log(`🎭 MiniMax character reference:`, {
+          url: characterRef.url.substring(0, 50) + '...',
+          weight: modelInput.subject_weight || 'default',
+          characterName: characterRef.characterName,
+        })
+      }
     } else {
       // Default parameters for other models
       modelInput = {
@@ -403,16 +452,28 @@ export class ImageGenerationService {
       }
     }
 
-    // Use the correct Replicate API format with version hash
-    const requestBody = {
-      version: modelIdentifier, // Use version instead of model
-      input: modelInput,
+    // Use the correct Replicate API format
+    let requestBody: any
+
+    if (modelIdentifier.includes(':')) {
+      // Version hash format: use version field
+      requestBody = {
+        version: modelIdentifier,
+        input: modelInput,
+      }
+    } else {
+      // Model name format: use model field
+      requestBody = {
+        model: modelIdentifier,
+        input: modelInput,
+      }
     }
 
     console.log(`📤 Replicate API request:`, {
       url: `${providerConfig.baseUrl}/predictions`,
       model: request.model,
-      version: modelIdentifier,
+      identifier: modelIdentifier,
+      format: modelIdentifier.includes(':') ? 'version' : 'model',
       inputKeys: Object.keys(requestBody.input),
       outputFormat: requestBody.input.output_format,
       aspectRatio: requestBody.input.aspect_ratio,
@@ -796,39 +857,52 @@ export class ImageGenerationService {
   }
 
   calculateGenerationCost(response: ImageGenerationResponse): number {
-    const baseCosts: Record<
-      ImageGenerationProvider,
-      Record<ImageModel, number>
-    > = {
-      replicate: {
-        flux1: 0.035,
-        'flux-kontext-pro': 0.06, // Based on Replicate pricing
-        'imagen-4': 0.08, // Premium Google model
-        'minimax-image-01': 0.05, // Mid-tier pricing
-        'flux-1.1-pro-ultra': 0.06, // Based on Replicate pricing
-      },
-      runpod: {
-        flux1: 0.032,
-        'flux-kontext-pro': 0.055,
-        'imagen-4': 0.075,
-        'minimax-image-01': 0.045,
-        'flux-1.1-pro-ultra': 0.055,
-      },
-      modal: {
-        flux1: 0.03,
-        'flux-kontext-pro': 0.05,
-        'imagen-4': 0.07,
-        'minimax-image-01': 0.04,
-        'flux-1.1-pro-ultra': 0.05,
-      },
+    // Cost per image in USD
+    const costPerImage: Record<ImageModel, number> = {
+      flux1: 0.003,
+      'flux-1.1-pro': 0.055,
+      'flux-kontext-pro': 0.055,
+      'imagen-4': 0.04,
+      'minimax-image-01': 0.025,
+      'flux-1.1-pro-ultra': 0.12,
+      'gpt-image-1': 0.04,
+      'dall-e-3': 0.04,
+      'dall-e-2': 0.02,
     }
 
-    const baseCost = baseCosts[response.provider]?.[response.model] || 0.035
+    const baseCost = costPerImage[response.model] || 0.04
 
-    // Add small processing fee
-    const processingFee = 0.002
+    // Provider-specific multipliers
+    const providerMultipliers: Record<ImageModel, number> = {
+      flux1: 1.0,
+      'flux-1.1-pro': 1.0,
+      'flux-kontext-pro': 1.0,
+      'imagen-4': 1.0,
+      'minimax-image-01': 1.0,
+      'flux-1.1-pro-ultra': 1.0,
+      'gpt-image-1': 1.0,
+      'dall-e-3': 1.0,
+      'dall-e-2': 1.0,
+    }
 
-    return baseCost + processingFee
+    const multiplier = providerMultipliers[response.model] || 1.0
+
+    // Resolution-based cost adjustments
+    const resolutionMultipliers: Record<ImageModel, number> = {
+      flux1: 1.0,
+      'flux-1.1-pro': 1.0,
+      'flux-kontext-pro': 1.0,
+      'imagen-4': 1.0,
+      'minimax-image-01': 1.0,
+      'flux-1.1-pro-ultra': 1.0,
+      'gpt-image-1': 1.0,
+      'dall-e-3': 1.0,
+      'dall-e-2': 1.0,
+    }
+
+    const resolutionMultiplier = resolutionMultipliers[response.model] || 1.0
+
+    return baseCost * multiplier * resolutionMultiplier
   }
 
   private updateMetrics(
@@ -866,5 +940,485 @@ export class ImageGenerationService {
       queueLength: queue.length,
       averageWaitTime: health?.averageResponseTime || 0,
     }
+  }
+
+  private async generateWithOpenAI(
+    request: ImageGenerationRequest,
+    enhancement: PromptEnhancement
+  ): Promise<ImageGenerationResponse> {
+    const startTime = Date.now()
+    const providerConfig = this.config.openai
+    if (!providerConfig) {
+      throw new Error('OpenAI provider not configured')
+    }
+
+    console.log('🔍 OpenAI generation request:', {
+      model: request.model,
+      prompt: enhancement.enhancedPrompt.substring(0, 100) + '...',
+      hasApiKey: !!providerConfig.apiKey,
+      useImageEdit: request.useImageEdit,
+      hasEditImages: !!(request.editImages && request.editImages.length > 0),
+    })
+
+    try {
+      // Check if we should use image edit instead of generation
+      if (
+        request.useImageEdit &&
+        request.editImages &&
+        request.editImages.length > 0
+      ) {
+        return await this.generateWithOpenAIEdit(
+          request,
+          enhancement,
+          providerConfig
+        )
+      }
+
+      // Regular image generation (existing code)
+      const openaiParams: any = {
+        model: request.model,
+        prompt: enhancement.enhancedPrompt,
+        n: 1,
+      }
+
+      // Set size based on model capabilities
+      if (request.model === 'gpt-image-1') {
+        // gpt-image-1 supports custom sizes and additional parameters
+        if (request.width === request.height) {
+          openaiParams.size = `${request.width}x${request.height}`
+        } else if (request.width > request.height) {
+          openaiParams.size = '1536x1024' // landscape
+        } else {
+          openaiParams.size = '1024x1536' // portrait
+        }
+
+        // gpt-image-1 specific parameters
+        if (request.openaiQuality) openaiParams.quality = request.openaiQuality
+        if (request.openaiBackground)
+          openaiParams.background = request.openaiBackground
+        if (request.openaiModeration)
+          openaiParams.moderation = request.openaiModeration
+        if (request.openaiOutputFormat)
+          openaiParams.output_format = request.openaiOutputFormat
+        if (request.openaiOutputCompression)
+          openaiParams.output_compression = request.openaiOutputCompression
+      } else if (request.model === 'dall-e-3') {
+        // DALL-E 3 supports specific sizes
+        if (request.width === request.height) {
+          openaiParams.size = '1024x1024'
+        } else if (request.width > request.height) {
+          openaiParams.size = '1792x1024'
+        } else {
+          openaiParams.size = '1024x1792'
+        }
+
+        if (request.openaiQuality) openaiParams.quality = request.openaiQuality
+        if (request.openaiStyle) openaiParams.style = request.openaiStyle
+      } else if (request.model === 'dall-e-2') {
+        // DALL-E 2 only supports square images
+        const size = Math.min(request.width, request.height)
+        if (size <= 256) openaiParams.size = '256x256'
+        else if (size <= 512) openaiParams.size = '512x512'
+        else openaiParams.size = '1024x1024'
+
+        openaiParams.n = Math.min(10, 1) // DALL-E 2 supports multiple images
+      }
+
+      // Add response format (gpt-image-1 always returns base64)
+      if (request.model !== 'gpt-image-1') {
+        openaiParams.response_format = 'url'
+      }
+
+      console.log('📤 OpenAI API request:', {
+        url: `${providerConfig.baseUrl}/images/generations`,
+        model: request.model,
+        size: openaiParams.size,
+        quality: openaiParams.quality,
+        style: openaiParams.style,
+      })
+
+      const response = await fetch(
+        `${providerConfig.baseUrl}/images/generations`,
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders('openai'),
+          body: JSON.stringify(openaiParams),
+        }
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ OpenAI API error:', response.status, errorText)
+        throw new Error(`OpenAI API error: ${response.status} ${errorText}`)
+      }
+
+      const result: OpenAIResponse = await response.json()
+      console.log('✅ OpenAI generation completed:', {
+        created: result.created,
+        dataLength: result.data.length,
+        hasUsage: !!result.usage,
+      })
+
+      // Extract image URL or convert base64 to data URL
+      let imageUrl: string
+      if (result.data[0].url) {
+        imageUrl = result.data[0].url
+      } else if (result.data[0].b64_json) {
+        // For gpt-image-1, convert base64 to data URL
+        const format = request.openaiOutputFormat || 'png'
+        imageUrl = `data:image/${format};base64,${result.data[0].b64_json}`
+      } else {
+        throw new Error('No image data received from OpenAI')
+      }
+
+      const generationTime = Date.now() - startTime
+
+      return {
+        id: `openai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        status: 'succeeded',
+        imageUrl,
+        provider: 'openai',
+        model: request.model,
+        generationTime,
+        metadata: {
+          prompt: enhancement.enhancedPrompt,
+          width: request.width,
+          height: request.height,
+          style: request.style,
+          negativePrompt: enhancement.negativePrompt,
+          qualityEnhancers: request.qualityEnhancers,
+          seed: request.seed,
+          steps: request.steps,
+          guidanceScale: request.guidanceScale,
+          loraWeights: request.loraWeights,
+          referenceImages: request.referenceImages,
+          characterReferences: request.characterReferences,
+          preserveFacialFeatures: request.preserveFacialFeatures,
+          characterConsistency: request.characterConsistency,
+        },
+        cost: this.calculateOpenAICost(request.model, result.usage),
+      }
+    } catch (error) {
+      console.error('❌ OpenAI generation failed:', error)
+      const generationTime = Date.now() - startTime
+
+      return {
+        id: `openai-error-${Date.now()}`,
+        status: 'failed',
+        provider: 'openai',
+        model: request.model,
+        generationTime,
+        error: error instanceof Error ? error.message : 'Unknown OpenAI error',
+        metadata: {
+          prompt: enhancement.enhancedPrompt,
+          width: request.width,
+          height: request.height,
+          style: request.style,
+          negativePrompt: enhancement.negativePrompt,
+          qualityEnhancers: request.qualityEnhancers,
+          seed: request.seed,
+          steps: request.steps,
+          guidanceScale: request.guidanceScale,
+          loraWeights: request.loraWeights,
+          referenceImages: request.referenceImages,
+          characterReferences: request.characterReferences,
+          preserveFacialFeatures: request.preserveFacialFeatures,
+          characterConsistency: request.characterConsistency,
+        },
+      }
+    }
+  }
+
+  private async generateWithOpenAIEdit(
+    request: ImageGenerationRequest,
+    enhancement: PromptEnhancement,
+    providerConfig: any
+  ): Promise<ImageGenerationResponse> {
+    const startTime = Date.now()
+
+    console.log('🎨 OpenAI image edit request:', {
+      model: request.model,
+      prompt: enhancement.enhancedPrompt.substring(0, 100) + '...',
+      imageCount: request.editImages?.length || 0,
+      hasMask: !!request.editMask,
+    })
+
+    try {
+      // Prepare form data for image edit
+      const formData = new FormData()
+
+      // Add the prompt
+      formData.append('prompt', enhancement.enhancedPrompt)
+      formData.append('model', request.model)
+      formData.append('n', '1')
+
+      // Set size based on model capabilities
+      if (request.model === 'gpt-image-1') {
+        if (request.width === request.height) {
+          formData.append('size', `${request.width}x${request.height}`)
+        } else if (request.width > request.height) {
+          formData.append('size', '1536x1024')
+        } else {
+          formData.append('size', '1024x1536')
+        }
+
+        // gpt-image-1 specific parameters
+        if (request.openaiQuality)
+          formData.append('quality', request.openaiQuality)
+        if (request.openaiBackground)
+          formData.append('background', request.openaiBackground)
+      } else if (request.model === 'dall-e-2') {
+        // DALL-E 2 only supports square images
+        const size = Math.min(request.width, request.height)
+        if (size <= 256) formData.append('size', '256x256')
+        else if (size <= 512) formData.append('size', '512x512')
+        else formData.append('size', '1024x1024')
+
+        formData.append('response_format', 'url')
+      }
+
+      // Handle image input - convert URLs to blobs if needed
+      if (request.editImages && request.editImages.length > 0) {
+        const imageUrl = request.editImages[0] // Use first image for now
+
+        console.log('🖼️ Processing image URL:', {
+          url: imageUrl.substring(0, 100) + '...',
+          isDataUrl: imageUrl.startsWith('data:'),
+          isHttpUrl: imageUrl.startsWith('http'),
+        })
+
+        if (imageUrl.startsWith('data:')) {
+          // Handle base64 data URLs
+          try {
+            const [header, base64Data] = imageUrl.split(',')
+            if (!base64Data) {
+              throw new Error('Invalid data URL format - missing base64 data')
+            }
+
+            // Validate base64 string
+            const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
+            if (!base64Regex.test(base64Data)) {
+              throw new Error('Invalid base64 characters detected')
+            }
+
+            const mimeType = header.split(';')[0].split(':')[1]
+            if (!mimeType) {
+              throw new Error('Invalid data URL format - missing MIME type')
+            }
+
+            // Convert base64 to Uint8Array more safely
+            const binaryString = atob(base64Data)
+            const bytes = new Uint8Array(binaryString.length)
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i)
+            }
+
+            const blob = new Blob([bytes], { type: mimeType })
+            formData.append('image', blob, 'character-reference.png')
+
+            console.log('✅ Successfully processed base64 image:', {
+              mimeType,
+              size: blob.size,
+              base64Length: base64Data.length,
+            })
+          } catch (base64Error) {
+            console.error('❌ Base64 processing failed:', base64Error)
+            throw new Error(
+              `Failed to process base64 image: ${base64Error instanceof Error ? base64Error.message : 'Unknown error'}`
+            )
+          }
+        } else if (imageUrl.startsWith('http')) {
+          // Handle regular URLs - fetch and convert to blob
+          try {
+            console.log('🌐 Fetching image from URL...')
+            const imageResponse = await fetch(imageUrl)
+            if (!imageResponse.ok) {
+              throw new Error(
+                `Failed to fetch image: ${imageResponse.status} ${imageResponse.statusText}`
+              )
+            }
+            const imageBlob = await imageResponse.blob()
+
+            // Validate image type
+            if (!imageBlob.type.startsWith('image/')) {
+              throw new Error(
+                `Invalid content type: ${imageBlob.type}. Expected image/*`
+              )
+            }
+
+            formData.append('image', imageBlob, 'character-reference.png')
+
+            console.log('✅ Successfully fetched image:', {
+              contentType: imageBlob.type,
+              size: imageBlob.size,
+            })
+          } catch (fetchError) {
+            console.error('❌ Image fetch failed:', fetchError)
+            throw new Error(
+              `Failed to fetch image from URL: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`
+            )
+          }
+        } else {
+          throw new Error(
+            `Unsupported image URL format: ${imageUrl.substring(0, 50)}...`
+          )
+        }
+      } else {
+        throw new Error('No edit images provided for image edit request')
+      }
+
+      // Handle mask if provided
+      if (request.editMask) {
+        try {
+          if (request.editMask.startsWith('data:')) {
+            const [header, base64Data] = request.editMask.split(',')
+            if (!base64Data) {
+              throw new Error('Invalid mask data URL format')
+            }
+
+            const binaryString = atob(base64Data)
+            const bytes = new Uint8Array(binaryString.length)
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i)
+            }
+
+            const blob = new Blob([bytes], { type: 'image/png' })
+            formData.append('mask', blob, 'edit-mask.png')
+          } else {
+            const maskResponse = await fetch(request.editMask)
+            if (!maskResponse.ok) {
+              throw new Error(`Failed to fetch mask: ${maskResponse.status}`)
+            }
+            const maskBlob = await maskResponse.blob()
+            formData.append('mask', maskBlob, 'edit-mask.png')
+          }
+        } catch (maskError) {
+          console.error('❌ Mask processing failed:', maskError)
+          // Don't fail the entire request for mask errors, just log and continue
+          console.log('⚠️ Continuing without mask due to processing error')
+        }
+      }
+
+      console.log('📤 OpenAI Image Edit API request:', {
+        url: `${providerConfig.baseUrl}/images/edits`,
+        model: request.model,
+        hasImage: formData.has('image'),
+        hasMask: formData.has('mask'),
+      })
+
+      const response = await fetch(`${providerConfig.baseUrl}/images/edits`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${providerConfig.apiKey}`,
+          // Don't set Content-Type for FormData - let browser set it with boundary
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(
+          '❌ OpenAI Image Edit API error:',
+          response.status,
+          errorText
+        )
+        throw new Error(
+          `OpenAI Image Edit API error: ${response.status} ${errorText}`
+        )
+      }
+
+      const result: OpenAIResponse = await response.json()
+      console.log('✅ OpenAI image edit completed:', {
+        created: result.created,
+        dataLength: result.data.length,
+        hasUsage: !!result.usage,
+      })
+
+      // Extract image URL or convert base64 to data URL
+      let imageUrl: string
+      if (result.data[0].url) {
+        imageUrl = result.data[0].url
+      } else if (result.data[0].b64_json) {
+        // For gpt-image-1, convert base64 to data URL
+        const format = request.openaiOutputFormat || 'png'
+        imageUrl = `data:image/${format};base64,${result.data[0].b64_json}`
+      } else {
+        throw new Error('No image data received from OpenAI Image Edit')
+      }
+
+      const generationTime = Date.now() - startTime
+
+      return {
+        id: `openai-edit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        status: 'succeeded',
+        imageUrl,
+        provider: 'openai',
+        model: request.model,
+        generationTime,
+        metadata: {
+          prompt: enhancement.enhancedPrompt,
+          width: request.width,
+          height: request.height,
+          style: request.style,
+          negativePrompt: enhancement.negativePrompt,
+          qualityEnhancers: request.qualityEnhancers,
+          seed: request.seed,
+          steps: request.steps,
+          guidanceScale: request.guidanceScale,
+          loraWeights: request.loraWeights,
+          referenceImages: request.referenceImages,
+          characterReferences: request.characterReferences,
+          preserveFacialFeatures: request.preserveFacialFeatures,
+          characterConsistency: request.characterConsistency,
+        },
+        cost: this.calculateOpenAICost(request.model, result.usage),
+        characterSimilarityScore: 0.9, // Image edit should have high similarity since it uses the reference directly
+      }
+    } catch (error) {
+      console.error('❌ OpenAI image edit failed:', error)
+      const generationTime = Date.now() - startTime
+
+      return {
+        id: `openai-edit-error-${Date.now()}`,
+        status: 'failed',
+        provider: 'openai',
+        model: request.model,
+        generationTime,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown OpenAI image edit error',
+        metadata: {
+          prompt: enhancement.enhancedPrompt,
+          width: request.width,
+          height: request.height,
+          style: request.style,
+          negativePrompt: enhancement.negativePrompt,
+          qualityEnhancers: request.qualityEnhancers,
+          seed: request.seed,
+          steps: request.steps,
+          guidanceScale: request.guidanceScale,
+          loraWeights: request.loraWeights,
+          referenceImages: request.referenceImages,
+          characterReferences: request.characterReferences,
+          preserveFacialFeatures: request.preserveFacialFeatures,
+          characterConsistency: request.characterConsistency,
+        },
+      }
+    }
+  }
+
+  private calculateOpenAICost(
+    model: ImageModel,
+    usage?: OpenAIResponse['usage']
+  ): number {
+    // OpenAI pricing (as of 2024)
+    const pricing: Record<string, number> = {
+      'gpt-image-1': 0.04, // $0.040 per image (1024x1024)
+      'dall-e-3': 0.04, // $0.040 per image (1024x1024), $0.080 for HD
+      'dall-e-2': 0.02, // $0.020 per image (1024x1024)
+    }
+
+    return pricing[model] || 0.04 // Default to gpt-image-1 pricing
   }
 }

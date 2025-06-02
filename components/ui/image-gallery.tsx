@@ -11,7 +11,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Download, Eye, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Download,
+  Eye,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+} from 'lucide-react'
+import { RegenerateButton } from '@/components/ui/regenerate-button'
+import { RegenerationDialog } from '@/components/ui/regeneration-dialog'
 
 interface ImageResult {
   requestId: string
@@ -35,6 +44,10 @@ interface ImageGalleryProps {
   title?: string
   showMetadata?: boolean
   storyMode?: boolean
+  onRegenerateImage?: (
+    image: ImageResult,
+    modificationPrompt?: string
+  ) => Promise<void>
 }
 
 export function ImageGallery({
@@ -42,9 +55,14 @@ export function ImageGallery({
   title = 'Generated Images',
   showMetadata = true,
   storyMode = false,
+  onRegenerateImage,
 }: ImageGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<ImageResult | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [regenerationDialogOpen, setRegenerationDialogOpen] = useState(false)
+  const [imageToRegenerate, setImageToRegenerate] =
+    useState<ImageResult | null>(null)
+  const [isRegenerating, setIsRegenerating] = useState(false)
 
   const completedImages = images.filter(
     img => img.status === 'completed' && img.response?.imageUrl
@@ -94,6 +112,25 @@ export function ImageGallery({
         // Add delay to avoid overwhelming the browser
         await new Promise(resolve => setTimeout(resolve, 500))
       }
+    }
+  }
+
+  const handleOpenRegenerationDialog = (image: ImageResult) => {
+    setImageToRegenerate(image)
+    setRegenerationDialogOpen(true)
+  }
+
+  const handleRegenerateImage = async (
+    image: ImageResult,
+    modificationPrompt?: string
+  ) => {
+    if (!onRegenerateImage) return
+
+    setIsRegenerating(true)
+    try {
+      await onRegenerateImage(image, modificationPrompt)
+    } finally {
+      setIsRegenerating(false)
     }
   }
 
@@ -162,75 +199,95 @@ export function ImageGallery({
                     }
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={e => {
-                        e.stopPropagation()
-                        openModal(
-                          image,
-                          completedImages.findIndex(
-                            img => img.requestId === image.requestId
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={e => {
+                          e.stopPropagation()
+                          openModal(
+                            image,
+                            completedImages.findIndex(
+                              img => img.requestId === image.requestId
+                            )
                           )
-                        )
-                      }}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View
-                    </Button>
+                        }}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View
+                      </Button>
+                      {onRegenerateImage && (
+                        <RegenerateButton
+                          variant="outline"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
+                          useDialog={true}
+                          onOpenDialog={() =>
+                            handleOpenRegenerationDialog(image)
+                          }
+                          onRegenerate={() => {}} // Legacy fallback
+                        />
+                      )}
+                    </div>
                   </div>
-                  {storyMode && (
-                    <Badge className="absolute top-2 left-2 bg-blue-600">
-                      Scene {index + 1}
-                    </Badge>
+
+                  {/* Metadata overlay */}
+                  {showMetadata && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                      <div className="flex justify-between items-end">
+                        <div className="text-white text-xs">
+                          <p className="font-medium">
+                            {image.response.model || 'Unknown'}
+                          </p>
+                          <p className="opacity-80">
+                            {image.response.width}×{image.response.height}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {image.cost ? `$${image.cost.toFixed(3)}` : 'Free'}
+                          </Badge>
+                          {image.duration && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs text-white border-white/30"
+                            >
+                              {(image.duration / 1000).toFixed(1)}s
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
-                  <Badge
-                    className="absolute top-2 right-2"
-                    variant={
-                      image.status === 'completed' ? 'default' : 'destructive'
-                    }
-                  >
-                    {image.status}
-                  </Badge>
                 </div>
               ) : image.status === 'failed' ? (
-                <div className="h-48 bg-red-50 flex items-center justify-center">
-                  <div className="text-center">
-                    <Badge variant="destructive" className="mb-2">
-                      Failed
-                    </Badge>
-                    <p className="text-sm text-red-600">
-                      {image.error || 'Generation failed'}
+                <div className="h-48 bg-red-50 border-2 border-red-200 border-dashed flex flex-col items-center justify-center p-4">
+                  <div className="text-red-600 text-center">
+                    <X className="w-8 h-8 mx-auto mb-2" />
+                    <p className="text-sm font-medium">Generation Failed</p>
+                    <p className="text-xs opacity-80 mt-1">
+                      {image.error || 'Unknown error'}
                     </p>
                   </div>
+                  {onRegenerateImage && (
+                    <RegenerateButton
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 border-red-300 text-red-600 hover:bg-red-50"
+                      showText={false}
+                      useDialog={true}
+                      onOpenDialog={() => handleOpenRegenerationDialog(image)}
+                      onRegenerate={() => {}} // Legacy fallback
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="h-48 bg-gray-100 flex items-center justify-center">
-                  <div className="text-center">
-                    <Badge variant="secondary" className="mb-2">
-                      Processing
-                    </Badge>
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <div className="text-center text-gray-500">
+                    <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin" />
+                    <p className="text-sm">Generating...</p>
                   </div>
-                </div>
-              )}
-
-              {/* Metadata */}
-              {showMetadata && image.response && (
-                <div className="p-3 space-y-2">
-                  <p className="text-xs text-gray-600 line-clamp-2">
-                    {image.response.prompt}
-                  </p>
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>{image.response.model}</span>
-                    {image.cost && <span>${image.cost.toFixed(3)}</span>}
-                  </div>
-                  {image.duration && (
-                    <div className="text-xs text-gray-500">
-                      {Math.round(image.duration / 1000)}s
-                    </div>
-                  )}
                 </div>
               )}
             </CardContent>
@@ -238,99 +295,134 @@ export function ImageGallery({
         ))}
       </div>
 
-      {/* Modal for full-size viewing */}
-      <Dialog
-        open={!!selectedImage}
-        onOpenChange={() => setSelectedImage(null)}
-      >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>
-                {storyMode
-                  ? `Scene ${currentIndex + 1}`
-                  : `Image ${currentIndex + 1}`}
-                {completedImages.length > 1 && ` of ${completedImages.length}`}
-              </span>
-              <div className="flex gap-2">
-                {completedImages.length > 1 && (
-                  <>
-                    <Button
+      {/* Image Modal */}
+      {selectedImage && selectedImage.response?.imageUrl && (
+        <Dialog
+          open={!!selectedImage}
+          onOpenChange={() => setSelectedImage(null)}
+        >
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle className="flex justify-between items-center">
+                <span>
+                  {storyMode ? "Luna's Adventure" : 'Generated Image'} (
+                  {currentIndex + 1} of {completedImages.length})
+                </span>
+                <div className="flex gap-2">
+                  {onRegenerateImage && (
+                    <RegenerateButton
                       variant="outline"
                       size="sm"
-                      onClick={() => navigateImage('prev')}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigateImage('next')}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </>
-                )}
-                {selectedImage?.response?.imageUrl && (
+                      useDialog={true}
+                      onOpenDialog={() =>
+                        handleOpenRegenerationDialog(selectedImage)
+                      }
+                      onRegenerate={() => {}} // Legacy fallback
+                    />
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const filename = storyMode
-                        ? `luna-story-scene-${currentIndex + 1}.png`
-                        : `generated-image-${currentIndex + 1}.png`
-                      downloadImage(selectedImage.response!.imageUrl, filename)
+                      if (selectedImage.response?.imageUrl) {
+                        const filename = storyMode
+                          ? `luna-story-scene-${currentIndex + 1}.png`
+                          : `generated-image-${currentIndex + 1}.png`
+                        downloadImage(selectedImage.response.imageUrl, filename)
+                      }
                     }}
                   >
-                    <Download className="w-4 h-4" />
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
                   </Button>
-                )}
-              </div>
-            </DialogTitle>
-          </DialogHeader>
+                </div>
+              </DialogTitle>
+            </DialogHeader>
 
-          {selectedImage?.response?.imageUrl && (
-            <div className="space-y-4">
+            <div className="relative">
               <img
                 src={selectedImage.response.imageUrl}
                 alt={`Generated image ${currentIndex + 1}`}
-                className="w-full max-h-[60vh] object-contain rounded-lg"
+                className="w-full h-auto max-h-[60vh] object-contain rounded-lg"
               />
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Prompt:</p>
-                <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                  {selectedImage.response.prompt}
-                </p>
+              {/* Navigation */}
+              {completedImages.length > 1 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
+                    onClick={() => navigateImage('prev')}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
+                    onClick={() => navigateImage('next')}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
+            </div>
 
+            {/* Image Details */}
+            {showMetadata && (
+              <div className="space-y-3 max-h-32 overflow-y-auto">
+                <div>
+                  <h4 className="font-medium text-sm mb-1">Prompt</h4>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                    {selectedImage.response.prompt}
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <span className="font-medium">Model:</span>{' '}
-                    {selectedImage.response.model}
+                    <span className="font-medium">Model:</span>
+                    <p className="text-gray-600">
+                      {selectedImage.response.model}
+                    </p>
                   </div>
                   <div>
-                    <span className="font-medium">Size:</span>{' '}
-                    {selectedImage.response.width}×
-                    {selectedImage.response.height}
+                    <span className="font-medium">Size:</span>
+                    <p className="text-gray-600">
+                      {selectedImage.response.width}×
+                      {selectedImage.response.height}
+                    </p>
                   </div>
-                  {selectedImage.cost && (
-                    <div>
-                      <span className="font-medium">Cost:</span> $
-                      {selectedImage.cost.toFixed(3)}
-                    </div>
-                  )}
-                  {selectedImage.duration && (
-                    <div>
-                      <span className="font-medium">Time:</span>{' '}
-                      {Math.round(selectedImage.duration / 1000)}s
-                    </div>
-                  )}
+                  <div>
+                    <span className="font-medium">Cost:</span>
+                    <p className="text-gray-600">
+                      {selectedImage.cost
+                        ? `$${selectedImage.cost.toFixed(3)}`
+                        : 'Free'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Duration:</span>
+                    <p className="text-gray-600">
+                      {selectedImage.duration
+                        ? `${(selectedImage.duration / 1000).toFixed(1)}s`
+                        : 'N/A'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Regeneration Dialog */}
+      <RegenerationDialog
+        open={regenerationDialogOpen}
+        onOpenChange={setRegenerationDialogOpen}
+        image={imageToRegenerate}
+        onRegenerate={handleRegenerateImage}
+        isLoading={isRegenerating}
+      />
     </div>
   )
 }

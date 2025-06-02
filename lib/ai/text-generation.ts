@@ -7,7 +7,6 @@
  * Features:
  * - OpenAI GPT-4o-mini integration
  * - Google Gemini fallback support
- * - Content safety filtering
  * - Enhanced retry logic and error handling with circuit breakers
  * - Response parsing and validation
  * - Usage tracking and cost monitoring
@@ -23,16 +22,6 @@ import {
   ChildProfile,
   StoryConfiguration,
 } from './prompt-templates'
-import {
-  ContentSafetyService,
-  createContentSafetyService,
-  EnhancedContentSafetyError,
-  type AgeGroup,
-  type SafetyLevel,
-  type ContentType,
-  type ContentSafetyResult,
-  type SafetyViolation,
-} from './content-safety'
 import {
   RetryErrorHandlingService,
   createRetryErrorHandlingService,
@@ -61,12 +50,6 @@ export interface AIServiceConfig {
   temperature: number
   maxRetries: number
   timeoutMs: number
-  // Content safety configuration
-  contentSafety?: {
-    ageGroup: AgeGroup
-    safetyLevel: SafetyLevel
-    enableEnhancedSafety: boolean
-  }
   // Enhanced retry and error handling configuration
   retryConfig?: Partial<RetryConfig>
   circuitBreakerConfig?: Partial<CircuitBreakerConfig>
@@ -75,13 +58,8 @@ export interface AIServiceConfig {
 
 export interface GenerationOptions {
   includeUsageStats?: boolean
-  enableSafetyCheck?: boolean
   customSystemPrompt?: string
   streamResponse?: boolean
-  // Enhanced safety options
-  contentType?: ContentType
-  overrideSafetyLevel?: SafetyLevel
-  skipSafetyCheck?: boolean
   // Enhanced error handling options
   enableRetries?: boolean
   enableCircuitBreaker?: boolean
@@ -102,7 +80,7 @@ export interface GenerationResult {
     generatedAt: Date
     processingTimeMs: number
     safetyCheckPassed: boolean
-    safetyResult?: ContentSafetyResult
+    safetyResult?: any
     // Enhanced metadata
     attemptCount: number
     circuitBreakerState: string
@@ -188,7 +166,6 @@ export class RateLimitError extends AIServiceError {
 class OpenAITextGenerationService {
   private client: OpenAI
   private config: AIServiceConfig
-  private contentSafetyService?: ContentSafetyService
   private retryErrorHandlingService: RetryErrorHandlingService
 
   constructor(config: AIServiceConfig) {
@@ -197,15 +174,6 @@ class OpenAITextGenerationService {
       apiKey: config.apiKey,
       timeout: config.timeoutMs,
     })
-
-    // Initialize content safety service if enhanced safety is enabled
-    if (config.contentSafety?.enableEnhancedSafety) {
-      this.contentSafetyService = createContentSafetyService(
-        config.contentSafety.ageGroup,
-        config.contentSafety.safetyLevel,
-        config.apiKey
-      )
-    }
 
     // Initialize enhanced retry and error handling service
     this.retryErrorHandlingService = createRetryErrorHandlingService(
@@ -246,28 +214,6 @@ class OpenAITextGenerationService {
           )
         }
 
-        // Enhanced safety check
-        let safetyCheckPassed = true
-        let safetyResult: ContentSafetyResult | undefined
-
-        if (options.enableSafetyCheck && !options.skipSafetyCheck) {
-          const result = await this.performSafetyCheck(
-            content,
-            options.contentType || 'outline',
-            options.overrideSafetyLevel
-          )
-          safetyCheckPassed = result.passed
-          safetyResult = result
-
-          if (!safetyCheckPassed) {
-            throw new EnhancedContentSafetyError(
-              'Content failed safety check',
-              result,
-              content
-            )
-          }
-        }
-
         const processingTime = Date.now() - startTime
         const usage = completion.usage
           ? {
@@ -289,8 +235,8 @@ class OpenAITextGenerationService {
             model: this.config.model,
             generatedAt: new Date(),
             processingTimeMs: processingTime,
-            safetyCheckPassed,
-            safetyResult,
+            safetyCheckPassed: true,
+            safetyResult: undefined,
             attemptCount: 1,
             circuitBreakerState: 'closed',
             correlationId: '',
@@ -358,28 +304,6 @@ class OpenAITextGenerationService {
           )
         }
 
-        // Enhanced safety check
-        let safetyCheckPassed = true
-        let safetyResult: ContentSafetyResult | undefined
-
-        if (options.enableSafetyCheck && !options.skipSafetyCheck) {
-          const result = await this.performSafetyCheck(
-            content,
-            options.contentType || 'story',
-            options.overrideSafetyLevel
-          )
-          safetyCheckPassed = result.passed
-          safetyResult = result
-
-          if (!safetyCheckPassed) {
-            throw new EnhancedContentSafetyError(
-              'Content failed safety check',
-              result,
-              content
-            )
-          }
-        }
-
         const processingTime = Date.now() - startTime
         const usage = completion.usage
           ? {
@@ -401,8 +325,8 @@ class OpenAITextGenerationService {
             model: this.config.model,
             generatedAt: new Date(),
             processingTimeMs: processingTime,
-            safetyCheckPassed,
-            safetyResult,
+            safetyCheckPassed: true,
+            safetyResult: undefined,
             attemptCount: 1,
             circuitBreakerState: 'closed',
             correlationId: '',
@@ -476,28 +400,6 @@ class OpenAITextGenerationService {
           )
         }
 
-        // Enhanced safety check
-        let safetyCheckPassed = true
-        let safetyResult: ContentSafetyResult | undefined
-
-        if (options.enableSafetyCheck && !options.skipSafetyCheck) {
-          const result = await this.performSafetyCheck(
-            content,
-            options.contentType || 'story',
-            options.overrideSafetyLevel
-          )
-          safetyCheckPassed = result.passed
-          safetyResult = result
-
-          if (!safetyCheckPassed) {
-            throw new EnhancedContentSafetyError(
-              'Content failed safety check',
-              result,
-              content
-            )
-          }
-        }
-
         const processingTime = Date.now() - startTime
         const usage = completion.usage
           ? {
@@ -519,8 +421,8 @@ class OpenAITextGenerationService {
             model: this.config.model,
             generatedAt: new Date(),
             processingTimeMs: processingTime,
-            safetyCheckPassed,
-            safetyResult,
+            safetyCheckPassed: true,
+            safetyResult: undefined,
             attemptCount: 1,
             circuitBreakerState: 'closed',
             correlationId: '',
@@ -551,71 +453,6 @@ class OpenAITextGenerationService {
     generationResult.metadata.fallbackUsed = result.metadata.fallbackUsed
 
     return generationResult
-  }
-
-  private async performSafetyCheck(
-    content: string,
-    contentType: ContentType,
-    overrideSafetyLevel?: SafetyLevel
-  ): Promise<ContentSafetyResult> {
-    if (this.contentSafetyService) {
-      return await this.contentSafetyService.checkContentSafety(
-        content,
-        contentType
-      )
-    } else {
-      return await this.basicSafetyCheck(content)
-    }
-  }
-
-  private async basicSafetyCheck(
-    content: string
-  ): Promise<ContentSafetyResult> {
-    // Basic safety patterns for children's content
-    const unsafePatterns = [
-      /violence|violent|fight|kill|death|die|blood|weapon|gun|knife|sword/i,
-      /scary|frightening|terrifying|nightmare|monster|ghost|demon/i,
-      /inappropriate|adult|mature|sexual|romantic/i,
-      /hate|discrimination|racism|sexism|bullying/i,
-      /drugs|alcohol|smoking|drinking|substance/i,
-      /dangerous|unsafe|risky|harmful|injury|hurt/i,
-    ]
-
-    const violations: SafetyViolation[] = []
-    let flaggedContent = ''
-
-    for (const pattern of unsafePatterns) {
-      const matches = content.match(pattern)
-      if (matches) {
-        violations.push({
-          type: 'custom_filter',
-          severity: 'medium',
-          category: 'inappropriate-content',
-          description: `Potentially inappropriate content: ${matches[0]}`,
-          flaggedContent: matches[0],
-          suggestion: 'Consider using more age-appropriate language',
-        })
-        flaggedContent += matches[0] + ' '
-      }
-    }
-
-    return {
-      passed: violations.length === 0,
-      safetyScore: violations.length === 0 ? 95 : 60,
-      ageAppropriatenessScore: violations.length === 0 ? 90 : 50,
-      educationalScore: 70,
-      overallScore: violations.length === 0 ? 85 : 60,
-      violations,
-      warnings: [],
-      metadata: {
-        checkedAt: new Date(),
-        processingTimeMs: 0,
-        filtersApplied: ['basic-patterns'],
-        contentType: 'story',
-        ageGroup: 'elementary',
-        safetyLevel: 'moderate',
-      },
-    }
   }
 
   private calculateCost(
@@ -685,26 +522,6 @@ class OpenAITextGenerationService {
 
     // Default to service unavailable for unknown errors
     return new ServiceUnavailableError(error.message, error)
-  }
-
-  getContentSafetyService(): ContentSafetyService | undefined {
-    return this.contentSafetyService
-  }
-
-  updateContentSafetyConfig(
-    config: Partial<AIServiceConfig['contentSafety']>
-  ): void {
-    if (this.config.contentSafety && config) {
-      this.config.contentSafety = { ...this.config.contentSafety, ...config }
-
-      if (config.enableEnhancedSafety && !this.contentSafetyService) {
-        this.contentSafetyService = createContentSafetyService(
-          this.config.contentSafety.ageGroup,
-          this.config.contentSafety.safetyLevel,
-          this.config.apiKey
-        )
-      }
-    }
   }
 
   getRetryErrorHandlingService(): RetryErrorHandlingService {
@@ -830,46 +647,6 @@ export class AITextGenerationService {
   }
 
   /**
-   * Get the content safety service from the primary service
-   */
-  getContentSafetyService(): ContentSafetyService | undefined {
-    return this.primaryService.getContentSafetyService()
-  }
-
-  /**
-   * Update content safety configuration for both primary and fallback services
-   */
-  updateContentSafetyConfig(
-    config: Partial<AIServiceConfig['contentSafety']>
-  ): void {
-    this.primaryService.updateContentSafetyConfig(config)
-    if (this.fallbackService) {
-      this.fallbackService.updateContentSafetyConfig(config)
-    }
-  }
-
-  /**
-   * Get comprehensive metrics from the retry and error handling system
-   */
-  getMetrics() {
-    const primaryMetrics = this.primaryService.getMetrics()
-    const fallbackMetrics = this.fallbackService?.getMetrics()
-
-    return {
-      primary: primaryMetrics,
-      fallback: fallbackMetrics,
-      combined: {
-        circuitBreakerState: primaryMetrics.circuitBreaker.state,
-        totalErrors: primaryMetrics.topErrors.reduce(
-          (sum, error) => sum + error.count,
-          0
-        ),
-        topErrors: primaryMetrics.topErrors,
-      },
-    }
-  }
-
-  /**
    * Get the retry and error handling service for advanced configuration
    */
   getRetryErrorHandlingService(): RetryErrorHandlingService {
@@ -941,11 +718,6 @@ export const DEFAULT_OPENAI_CONFIG: Partial<AIServiceConfig> = {
   temperature: 0.7,
   maxRetries: 3,
   timeoutMs: 30000,
-  contentSafety: {
-    ageGroup: 'elementary',
-    safetyLevel: 'moderate',
-    enableEnhancedSafety: true,
-  },
   retryConfig: {
     ...DEFAULT_RETRY_CONFIG,
     maxAttempts: 3,

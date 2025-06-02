@@ -8,7 +8,8 @@ const config: ProviderConfig = {
     apiKey: process.env.REPLICATE_API_KEY!,
     baseUrl: 'https://api.replicate.com/v1',
     models: {
-      flux1: 'black-forest-labs/flux-schnell',
+      flux1: '131d9e185621b4b4d349fd262e363420a6f74081d8c27966c9c5bcf120fa3985', // FLUX Schnell latest version
+      'flux-1.1-pro': 'black-forest-labs/flux-1.1-pro',
       'flux-kontext-pro': 'black-forest-labs/flux-kontext-pro',
       'imagen-4': 'google/imagen-4',
       'minimax-image-01': 'minimax/image-01',
@@ -21,6 +22,7 @@ const config: ProviderConfig = {
     baseUrl: 'https://api.runpod.ai/v2',
     models: {
       flux1: 'flux-1-schnell',
+      'flux-1.1-pro': 'flux-1.1-pro',
       'flux-kontext-pro': 'flux-kontext-pro',
       'imagen-4': 'imagen-4',
       'minimax-image-01': 'minimax-image-01',
