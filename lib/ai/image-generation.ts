@@ -42,8 +42,96 @@ export class ImageGenerationService {
   // Default timeout for unknown models
   private readonly DEFAULT_TIMEOUT = 60000 // 60 seconds
 
-  constructor(config: ProviderConfig) {
-    this.config = config
+  constructor(config?: Partial<ProviderConfig>) {
+    this.config = {
+      replicate: {
+        apiKey: process.env.REPLICATE_API_TOKEN || '',
+        baseUrl: 'https://api.replicate.com/v1',
+        timeout: 300000, // 5 minutes
+        retries: 3,
+        models: {
+          flux1:
+            'black-forest-labs/flux-schnell:131d9e185621b4b4d349fd262e363420a6f74081d8c27966c9c5bcf120fa3985',
+          'flux-1.1-pro': 'black-forest-labs/flux-1.1-pro',
+          'flux-kontext-pro': 'black-forest-labs/flux-kontext-pro',
+          'imagen-4': 'google-deepmind/imagen-4',
+          'minimax-image-01': 'minimax/minimax-image-01',
+          'flux-1.1-pro-ultra': 'black-forest-labs/flux-1.1-pro-ultra',
+          'gpt-image-1': '', // Not used for Replicate
+          'dall-e-3': '', // Not used for Replicate
+          'dall-e-2': '', // Not used for Replicate
+        },
+        rateLimit: {
+          requestsPerMinute: 60,
+          concurrent: 5,
+        },
+      },
+      runpod: {
+        apiKey: process.env.RUNPOD_API_KEY || '',
+        baseUrl: process.env.RUNPOD_ENDPOINT || '',
+        timeout: 180000, // 3 minutes
+        retries: 2,
+        models: {
+          flux1: 'flux-schnell',
+          'flux-1.1-pro': 'flux-1.1-pro',
+          'flux-kontext-pro': 'flux-kontext-pro',
+          'imagen-4': 'imagen-4',
+          'minimax-image-01': 'minimax-image-01',
+          'flux-1.1-pro-ultra': 'flux-1.1-pro-ultra',
+          'gpt-image-1': '', // Not used for RunPod
+          'dall-e-3': '', // Not used for RunPod
+          'dall-e-2': '', // Not used for RunPod
+        },
+        rateLimit: {
+          requestsPerMinute: 30,
+          concurrent: 3,
+        },
+      },
+      modal: {
+        apiKey: process.env.MODAL_TOKEN_ID || '',
+        baseUrl: process.env.MODAL_ENDPOINT || '',
+        timeout: 120000, // 2 minutes
+        retries: 2,
+        models: {
+          flux1: 'flux-schnell',
+          'flux-1.1-pro': 'flux-1.1-pro',
+          'flux-kontext-pro': 'flux-kontext-pro',
+          'imagen-4': 'imagen-4',
+          'minimax-image-01': 'minimax-image-01',
+          'flux-1.1-pro-ultra': 'flux-1.1-pro-ultra',
+          'gpt-image-1': '', // Not used for Modal
+          'dall-e-3': '', // Not used for Modal
+          'dall-e-2': '', // Not used for Modal
+        },
+        rateLimit: {
+          requestsPerMinute: 20,
+          concurrent: 2,
+        },
+      },
+      openai: {
+        apiKey: process.env.OPENAI_API_KEY || '',
+        baseUrl: 'https://api.openai.com/v1',
+        timeout: 120000, // 2 minutes
+        retries: 3,
+        models: {
+          flux1: '', // Not used for OpenAI
+          'flux-1.1-pro': '', // Not used for OpenAI
+          'flux-kontext-pro': '', // Not used for OpenAI
+          'imagen-4': '', // Not used for OpenAI
+          'minimax-image-01': '', // Not used for OpenAI
+          'flux-1.1-pro-ultra': '', // Not used for OpenAI
+          'gpt-image-1': 'gpt-image-1',
+          'dall-e-3': 'dall-e-3',
+          'dall-e-2': 'dall-e-2',
+        },
+        rateLimit: {
+          requestsPerMinute: 50,
+          concurrent: 5,
+        },
+      },
+      ...config,
+    }
+
     this.providerHealth = new Map()
     this.requestQueues = new Map()
     this.concurrentRequests = new Map()
@@ -138,29 +226,35 @@ export class ImageGenerationService {
   private getAuthHeaders(
     provider: ImageGenerationProvider
   ): Record<string, string> {
-    const providerConfig = this.config[provider]
-    if (!providerConfig) {
+    const config = this.config[provider]
+    if (!config) {
       throw new Error(`Provider ${provider} not configured`)
-    }
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
     }
 
     switch (provider) {
       case 'replicate':
-        headers['Authorization'] = `Token ${providerConfig.apiKey}`
-        break
+        return {
+          Authorization: `Token ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        }
       case 'runpod':
+        return {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        }
       case 'modal':
-        headers['Authorization'] = `Bearer ${providerConfig.apiKey}`
-        break
+        return {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        }
       case 'openai':
-        headers['Authorization'] = `Bearer ${providerConfig.apiKey}`
-        break
+        return {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        }
+      default:
+        throw new Error(`Unknown provider: ${provider}`)
     }
-
-    return headers
   }
 
   private updateProviderHealth(
@@ -942,6 +1036,17 @@ export class ImageGenerationService {
     }
   }
 
+  private calculateOpenAICost(model: string, usage?: any): number {
+    // OpenAI image generation costs (per image)
+    const costs: Record<string, number> = {
+      'gpt-image-1': 0.04, // $0.040 per image
+      'dall-e-3': 0.04, // $0.040 per image (1024x1024)
+      'dall-e-2': 0.02, // $0.020 per image (1024x1024)
+    }
+
+    return costs[model] || 0.04 // Default to gpt-image-1 cost
+  }
+
   private async generateWithOpenAI(
     request: ImageGenerationRequest,
     enhancement: PromptEnhancement
@@ -952,97 +1057,98 @@ export class ImageGenerationService {
       throw new Error('OpenAI provider not configured')
     }
 
-    console.log('🔍 OpenAI generation request:', {
+    // Validate API key
+    if (!providerConfig.apiKey) {
+      throw new Error('OpenAI API key not provided')
+    }
+
+    // Use image edit for character consistency if enabled and supported
+    if (
+      request.useImageEdit &&
+      (request.model === 'gpt-image-1' || request.model === 'dall-e-2') &&
+      request.editImages &&
+      request.editImages.length > 0
+    ) {
+      console.log('Using OpenAI Image Edit for character consistency')
+      return this.generateWithOpenAIEdit(request, enhancement, providerConfig)
+    }
+
+    console.log('🎨 OpenAI standard generation request:', {
       model: request.model,
       prompt: enhancement.enhancedPrompt.substring(0, 100) + '...',
-      hasApiKey: !!providerConfig.apiKey,
-      useImageEdit: request.useImageEdit,
-      hasEditImages: !!(request.editImages && request.editImages.length > 0),
+      size: `${request.width}x${request.height}`,
     })
 
     try {
-      // Check if we should use image edit instead of generation
-      if (
-        request.useImageEdit &&
-        request.editImages &&
-        request.editImages.length > 0
-      ) {
-        return await this.generateWithOpenAIEdit(
-          request,
-          enhancement,
-          providerConfig
-        )
-      }
-
-      // Regular image generation (existing code)
-      const openaiParams: any = {
-        model: request.model,
+      const requestBody: any = {
         prompt: enhancement.enhancedPrompt,
+        model: request.model,
         n: 1,
       }
 
       // Set size based on model capabilities
       if (request.model === 'gpt-image-1') {
-        // gpt-image-1 supports custom sizes and additional parameters
         if (request.width === request.height) {
-          openaiParams.size = `${request.width}x${request.height}`
+          requestBody.size = `${request.width}x${request.height}`
         } else if (request.width > request.height) {
-          openaiParams.size = '1536x1024' // landscape
+          requestBody.size = '1536x1024'
         } else {
-          openaiParams.size = '1024x1536' // portrait
+          requestBody.size = '1024x1536'
         }
 
         // gpt-image-1 specific parameters
-        if (request.openaiQuality) openaiParams.quality = request.openaiQuality
+        if (request.openaiQuality) requestBody.quality = request.openaiQuality
         if (request.openaiBackground)
-          openaiParams.background = request.openaiBackground
-        if (request.openaiModeration)
-          openaiParams.moderation = request.openaiModeration
+          requestBody.background = request.openaiBackground
         if (request.openaiOutputFormat)
-          openaiParams.output_format = request.openaiOutputFormat
+          requestBody.output_format = request.openaiOutputFormat
         if (request.openaiOutputCompression)
-          openaiParams.output_compression = request.openaiOutputCompression
+          requestBody.output_compression = request.openaiOutputCompression
+        if (request.openaiModeration)
+          requestBody.moderation = request.openaiModeration
       } else if (request.model === 'dall-e-3') {
-        // DALL-E 3 supports specific sizes
+        // DALL-E 3 sizes
         if (request.width === request.height) {
-          openaiParams.size = '1024x1024'
+          requestBody.size = '1024x1024'
         } else if (request.width > request.height) {
-          openaiParams.size = '1792x1024'
+          requestBody.size = '1792x1024'
         } else {
-          openaiParams.size = '1024x1792'
+          requestBody.size = '1024x1792'
         }
 
-        if (request.openaiQuality) openaiParams.quality = request.openaiQuality
-        if (request.openaiStyle) openaiParams.style = request.openaiStyle
+        if (
+          request.openaiQuality === 'hd' ||
+          request.openaiQuality === 'standard'
+        ) {
+          requestBody.quality = request.openaiQuality
+        }
+        if (request.openaiStyle) requestBody.style = request.openaiStyle
+        requestBody.response_format = 'url'
       } else if (request.model === 'dall-e-2') {
         // DALL-E 2 only supports square images
         const size = Math.min(request.width, request.height)
-        if (size <= 256) openaiParams.size = '256x256'
-        else if (size <= 512) openaiParams.size = '512x512'
-        else openaiParams.size = '1024x1024'
+        if (size <= 256) requestBody.size = '256x256'
+        else if (size <= 512) requestBody.size = '512x512'
+        else requestBody.size = '1024x1024'
 
-        openaiParams.n = Math.min(10, 1) // DALL-E 2 supports multiple images
-      }
-
-      // Add response format (gpt-image-1 always returns base64)
-      if (request.model !== 'gpt-image-1') {
-        openaiParams.response_format = 'url'
+        requestBody.response_format = 'url'
       }
 
       console.log('📤 OpenAI API request:', {
         url: `${providerConfig.baseUrl}/images/generations`,
-        model: request.model,
-        size: openaiParams.size,
-        quality: openaiParams.quality,
-        style: openaiParams.style,
+        model: requestBody.model,
+        size: requestBody.size,
       })
 
       const response = await fetch(
         `${providerConfig.baseUrl}/images/generations`,
         {
           method: 'POST',
-          headers: this.getAuthHeaders('openai'),
-          body: JSON.stringify(openaiParams),
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${providerConfig.apiKey}`,
+          },
+          body: JSON.stringify(requestBody),
         }
       )
 
@@ -1097,6 +1203,9 @@ export class ImageGenerationService {
           characterConsistency: request.characterConsistency,
         },
         cost: this.calculateOpenAICost(request.model, result.usage),
+        characterSimilarityScore: request.characterReferences?.length
+          ? 0.7
+          : undefined, // Lower for standard generation without image edit
       }
     } catch (error) {
       console.error('❌ OpenAI generation failed:', error)
@@ -1195,10 +1304,28 @@ export class ImageGenerationService {
               throw new Error('Invalid data URL format - missing base64 data')
             }
 
-            // Validate base64 string
+            // Clean and normalize base64 string
+            let cleanBase64 = base64Data.trim()
+
+            // Convert URL-safe base64 to standard base64
+            cleanBase64 = cleanBase64.replace(/-/g, '+').replace(/_/g, '/')
+
+            // Add proper padding if missing
+            while (cleanBase64.length % 4) {
+              cleanBase64 += '='
+            }
+
+            // Validate base64 string (allow standard base64 characters)
             const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
-            if (!base64Regex.test(base64Data)) {
-              throw new Error('Invalid base64 characters detected')
+            if (!base64Regex.test(cleanBase64)) {
+              console.error('❌ Invalid base64 characters:', {
+                original: base64Data.substring(0, 50) + '...',
+                cleaned: cleanBase64.substring(0, 50) + '...',
+                length: cleanBase64.length,
+              })
+              throw new Error(
+                'Invalid base64 characters detected after cleaning'
+              )
             }
 
             const mimeType = header.split(';')[0].split(':')[1]
@@ -1207,7 +1334,20 @@ export class ImageGenerationService {
             }
 
             // Convert base64 to Uint8Array more safely
-            const binaryString = atob(base64Data)
+            let binaryString: string
+            try {
+              binaryString = atob(cleanBase64)
+            } catch (atobError) {
+              console.error('❌ atob() failed:', {
+                error: atobError,
+                base64Length: cleanBase64.length,
+                base64Sample: cleanBase64.substring(0, 100),
+              })
+              throw new Error(
+                `Failed to decode base64: ${atobError instanceof Error ? atobError.message : 'Unknown atob error'}`
+              )
+            }
+
             const bytes = new Uint8Array(binaryString.length)
             for (let i = 0; i < binaryString.length; i++) {
               bytes[i] = binaryString.charCodeAt(i)
@@ -1219,7 +1359,8 @@ export class ImageGenerationService {
             console.log('✅ Successfully processed base64 image:', {
               mimeType,
               size: blob.size,
-              base64Length: base64Data.length,
+              originalBase64Length: base64Data.length,
+              cleanedBase64Length: cleanBase64.length,
             })
           } catch (base64Error) {
             console.error('❌ Base64 processing failed:', base64Error)
@@ -1406,19 +1547,5 @@ export class ImageGenerationService {
         },
       }
     }
-  }
-
-  private calculateOpenAICost(
-    model: ImageModel,
-    usage?: OpenAIResponse['usage']
-  ): number {
-    // OpenAI pricing (as of 2024)
-    const pricing: Record<string, number> = {
-      'gpt-image-1': 0.04, // $0.040 per image (1024x1024)
-      'dall-e-3': 0.04, // $0.040 per image (1024x1024), $0.080 for HD
-      'dall-e-2': 0.02, // $0.020 per image (1024x1024)
-    }
-
-    return pricing[model] || 0.04 // Default to gpt-image-1 pricing
   }
 }

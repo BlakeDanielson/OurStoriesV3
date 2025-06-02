@@ -71,6 +71,8 @@ export interface ProviderModelConfig {
 export interface ProviderSettings {
   apiKey: string
   baseUrl: string
+  timeout?: number
+  retries?: number
   models: ProviderModelConfig
   rateLimit: RateLimit
 }
